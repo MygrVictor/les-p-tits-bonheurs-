@@ -17,8 +17,9 @@ async function main() {
     },
   });
 
+  const categoryIdMap = new Map<string, string>();
   for (const category of categories) {
-    await prisma.category.upsert({
+    const record = await prisma.category.upsert({
       where: { slug: category.slug },
       update: { name: category.name, parentId: category.parentId ?? null },
       create: {
@@ -27,23 +28,24 @@ async function main() {
         parentId: category.parentId ?? null,
       },
     });
+    categoryIdMap.set(category.id, record.id);
   }
 
+  const brandIdMap = new Map<string, string>();
   for (const brand of brands) {
-    await prisma.brand.upsert({
+    const record = await prisma.brand.upsert({
       where: { slug: brand.slug },
       update: { name: brand.name, logo: brand.logo ?? null },
       create: { name: brand.name, slug: brand.slug, logo: brand.logo ?? null },
     });
+    brandIdMap.set(brand.id, record.id);
   }
 
   for (const product of products) {
-    const category = categories.find(
-      (entry) => entry.id === product.categoryId,
-    );
-    const brand = brands.find((entry) => entry.id === product.brandId);
+    const categoryDbId = categoryIdMap.get(product.categoryId);
+    const brandDbId = brandIdMap.get(product.brandId);
 
-    if (!category || !brand) {
+    if (!categoryDbId || !brandDbId) {
       continue;
     }
 
@@ -66,8 +68,8 @@ async function main() {
               : "ACTIVE",
         isNew: product.isNew,
         tags: product.tags,
-        categoryId: category.id,
-        brandId: brand.id,
+        categoryId: categoryDbId,
+        brandId: brandDbId,
       },
       create: {
         name: product.name,
@@ -87,8 +89,8 @@ async function main() {
               : "ACTIVE",
         isNew: product.isNew,
         tags: product.tags,
-        categoryId: category.id,
-        brandId: brand.id,
+        categoryId: categoryDbId,
+        brandId: brandDbId,
       },
     });
   }

@@ -25,19 +25,28 @@ const authConfig = {
       async authorize(credentials) {
         const parsed = loginSchema.safeParse(credentials);
         if (!parsed.success) {
+          console.warn("[auth] payload de connexion invalide");
           return null;
         }
 
+        const normalizedEmail = parsed.data.email.toLowerCase().trim();
+
         const user = (await prisma.user.findUnique({
-          where: { email: parsed.data.email.toLowerCase() },
+          where: { email: normalizedEmail },
         })) as any;
 
         if (!user) {
+          console.warn(
+            `[auth] aucun utilisateur trouvé pour l'email: ${normalizedEmail}`,
+          );
           return null;
         }
 
         const matches = await compare(parsed.data.password, user.password);
         if (!matches) {
+          console.warn(
+            `[auth] mot de passe incorrect pour l'email: ${normalizedEmail}`,
+          );
           return null;
         }
 

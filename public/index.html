@@ -1,0 +1,1239 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Les P'tits Bonheurs — Bijoux et accessoires de créateurs à Pornic."
+    />
+    <title>Les P'tits Bonheurs — Accueil</title>
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="icon" href="/logo.jpg" />
+  </head>
+  <body>
+    <div id="bandeau-paiement" class="bandeau-paiement" role="alert"></div>
+
+    <nav class="sidenav" id="sidenav" aria-label="Navigation collections">
+      <button
+        class="sidenav__toggle"
+        id="sidenav-toggle"
+        aria-expanded="false"
+        aria-label="Collections"
+      >
+        <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6" /></svg>
+      </button>
+      <span class="sidenav__label-vert" aria-hidden="true">Collections</span>
+      <div class="sidenav__contenu">
+        <div class="sidenav__logo">
+          <img src="/logo.jpg" alt="Les P'tits Bonheurs" />
+        </div>
+        <p class="sidenav__section-titre">✦ Collections</p>
+        <ul class="sidenav__liens">
+          <li><a href="/produits.html">Tout voir</a></li>
+          <li><a href="/produits.html?categorie=bagues">Bagues</a></li>
+          <li><a href="/produits.html?categorie=colliers">Colliers</a></li>
+          <li>
+            <a href="/produits.html?categorie=boucles">Boucles d'oreilles</a>
+          </li>
+          <li><a href="/produits.html?categorie=pochettes">Pochettes</a></li>
+          <li><a href="/produits.html?categorie=foulards">Foulards</a></li>
+          <li><a href="/produits.html?categorie=epingles">Epingles</a></li>
+        </ul>
+        <hr class="sidenav__separateur" />
+        <ul class="sidenav__liens sidenav__liens--nav">
+          <li><a href="/" class="actif">Accueil</a></li>
+          <li><a href="/produits.html">La Boutique</a></li>
+          <li><a href="/contact.html">Contact</a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <header class="header" id="header">
+      <a href="/" class="header__logo">
+        <img
+          src="/logo.jpg"
+          alt="Les P'tits Bonheurs"
+          class="header__logo-img"
+        />
+      </a>
+      <nav aria-label="Navigation principale">
+        <ul class="header__nav">
+          <li><a href="/produits.html">La Boutique</a></li>
+          <li><a href="/#atelier">L'Atelier</a></li>
+          <li><a href="/contact.html">Contact</a></li>
+        </ul>
+      </nav>
+      <div class="header__actions">
+        <button
+          class="btn-panier"
+          id="btn-ouvrir-panier"
+          aria-label="Ouvrir le panier"
+        >
+          <svg class="btn-panier__icone" viewBox="0 0 24 24">
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <path d="M16 10a4 4 0 01-8 0" />
+          </svg>
+          Panier
+          <span class="panier-badge" id="panier-badge" aria-live="polite"
+            >0</span
+          >
+        </button>
+      </div>
+    </header>
+
+    <section class="hero hero--plein" aria-label="Présentation">
+      <div class="hero__image">
+        <img src="hero.jpg" alt="Bijoux de créateurs" loading="eager" />
+        <div class="hero__overlay"></div>
+      </div>
+      <div class="hero__contenu hero__contenu--centre">
+        <p class="hero__surtitre">❖ Bijoux de créateurs · Pornic</p>
+        <h1 class="hero__titre">
+          Chaque pièce porte<br />une <em>histoire</em>
+        </h1>
+        <p class="hero__phrase">
+          Bijoux &amp; accessoires de créateurs, sélectionnés avec soin et
+          passion.
+        </p>
+        <a href="/produits.html" class="hero__cta"
+          >Découvrir la collection
+          <svg viewBox="0 0 24 24">
+            <line x1="5" y1="12" x2="19" y2="12" />
+            <polyline points="12 5 19 12 12 19" /></svg
+        ></a>
+      </div>
+    </section>
+
+    <!-- ──────────────────────────────────────────────────────────────────
+         COLLECTIONS THÉMATIQUES
+    ─────────────────────────────────────────────────────────────────── -->
+    <section class="section" id="phares">
+      <div class="section__entete">
+        <div>
+          <p class="section__label">❖ Sélection du moment</p>
+          <h2 class="section__titre">Nos coups de cœur</h2>
+          <div class="section__trait"></div>
+        </div>
+        <a href="/produits.html" class="lien-voir-tout"
+          >Voir toute la collection
+          <svg viewBox="0 0 24 24">
+            <line x1="5" y1="12" x2="19" y2="12" />
+            <polyline points="12 5 19 12 12 19" /></svg
+        ></a>
+      </div>
+      <div id="grille-phares" class="grille-produits">
+        <div class="produits-loader" id="loader-phares">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section Kharmari -->
+    <section class="section-marque section-marque--kharmari">
+      <div
+        class="section-marque__deco section-marque__deco--kharmari"
+        aria-hidden="true"
+      >
+        <span>◎</span><span>◎</span><span>◎</span>
+      </div>
+      <div class="section-marque__inner">
+        <div class="section-marque__texte">
+          <span class="section-marque__label">Collection Bracelets</span>
+          <h2 class="section-marque__titre">Kharmari</h2>
+          <div class="section-marque__trait"></div>
+          <p class="section-marque__description">
+            Des bracelets d'exception, façonnés à la main avec des matériaux
+            soigneusement sélectionnés. Kharmari sublime votre poignet de
+            perles, fils et métaux précieux pour des pièces à porter en toutes
+            occasions.
+          </p>
+          <div class="section-marque__pictos">
+            <span>Fait main</span>
+            <span>Matériaux nobles</span>
+            <span>Éthique</span>
+          </div>
+          <a href="/produits.html?marque=kharmari" class="section-marque__cta"
+            >Découvrir Kharmari</a
+          >
+        </div>
+        <div class="section-marque__grille" id="grille-kharmari">
+          <!-- Produits Kharmari chargés dynamiquement -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Section Charly Therapy -->
+    <section class="section-marque section-marque--charly">
+      <div
+        class="section-marque__deco section-marque__deco--charly"
+        aria-hidden="true"
+      >
+        <span>◐</span><span>◐</span><span>◐</span>
+      </div>
+      <div class="section-marque__inner section-marque__inner--reverse">
+        <div class="section-marque__grille" id="grille-charly">
+          <!-- Produits Charly Therapy chargés dynamiquement -->
+        </div>
+        <div class="section-marque__texte">
+          <span class="section-marque__label">Collection Soleil</span>
+          <h2 class="section-marque__titre">Charly Therapy</h2>
+          <div
+            class="section-marque__trait section-marque__trait--charly"
+          ></div>
+          <p class="section-marque__description">
+            Portez le soleil à votre regard. Charly Therapy crée des lunettes de
+            soleil au design affirmé, entre élégance intemporelle et esprit
+            bohème — pour les journées qui méritent d'être vécues en grand.
+          </p>
+          <div class="section-marque__pictos">
+            <span>Protection UV</span>
+            <span>Design exclusif</span>
+            <span>Esprit balnéaire</span>
+          </div>
+          <a
+            href="/produits.html?marque=charly-therapy"
+            class="section-marque__cta section-marque__cta--charly"
+            >Découvrir Charly Therapy</a
+          >
+        </div>
+      </div>
+    </section>
+
+    <!-- Bandeau thématique 1 : Perles -->
+    <section class="section-bandeau" id="bandeau-perles">
+      <div class="section-bandeau__contenu">
+        <div class="section-bandeau__texte">
+          <p class="section__label">✦ Incontournables</p>
+          <h2 class="section-bandeau__titre">Perles & Matériaux</h2>
+          <p class="section-bandeau__desc">
+            Une collection de perles précieuses et accessoires pour créer vos
+            propres pièces.
+          </p>
+          <a
+            href="/produits.html?categorie=perles"
+            class="hero__cta"
+            style="display: inline-flex; gap: 0.75rem"
+          >
+            Découvrir les perles
+            <svg viewBox="0 0 24 24">
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
+          </a>
+        </div>
+        <div id="grille-bandeau-perles" class="grille-produits-bandeau">
+          <div class="produits-loader" style="grid-column: 1/-1">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bandeau thématique 2 : Maroquinerie -->
+    <section
+      class="section-bandeau section-bandeau--inverse"
+      id="bandeau-maroquinerie"
+    >
+      <div class="section-bandeau__contenu">
+        <div id="grille-bandeau-maroquinerie" class="grille-produits-bandeau">
+          <div class="produits-loader" style="grid-column: 1/-1">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+        <div class="section-bandeau__texte">
+          <p class="section__label">✦ Beauté & Accessoires</p>
+          <h2 class="section-bandeau__titre">Maroquinerie Créateurs</h2>
+          <p class="section-bandeau__desc">
+            Pochettes et accessoires signés par les plus beaux créateurs de
+            notre sélection.
+          </p>
+          <a
+            href="/produits.html?categorie=maroquinerie"
+            class="hero__cta"
+            style="display: inline-flex; gap: 0.75rem"
+          >
+            Explorer les créateurs
+            <svg viewBox="0 0 24 24">
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bandeau thématique 3 : Bijoux Créateurs -->
+    <section class="section-bandeau" id="bandeau-bijoux">
+      <div class="section-bandeau__contenu">
+        <div class="section-bandeau__texte">
+          <p class="section__label">✦ Pièces Uniques</p>
+          <h2 class="section-bandeau__titre">Bijoux de Créateurs</h2>
+          <p class="section-bandeau__desc">
+            Bagues, colliers et bracelets de créateurs talentueux. Chaque pièce
+            raconte une histoire.
+          </p>
+          <a
+            href="/produits.html?categorie=bijoux-createurs"
+            class="hero__cta"
+            style="display: inline-flex; gap: 0.75rem"
+          >
+            Voir les bijoux
+            <svg viewBox="0 0 24 24">
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
+          </a>
+        </div>
+        <div id="grille-bandeau-bijoux" class="grille-produits-bandeau">
+          <div class="produits-loader" style="grid-column: 1/-1">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-atelier" id="atelier">
+      <div class="section-atelier__inner">
+        <div class="section-atelier__image">
+          <img src="/atelier.jpg" alt="La boutique" loading="lazy" />
+        </div>
+        <div>
+          <p class="section-atelier__label">❖ La Boutique</p>
+          <h2 class="section-atelier__titre">
+            Une sélection de pièces<br />choisies avec passion
+          </h2>
+          <p class="section-atelier__texte">
+            Chez Les P'tits Bonheurs, nous dénichons pour vous des bijoux et
+            accessoires signés par des créateurs talentueux. Des matières
+            authentiques — laiton, argent, soie, lin — sélectionnées pour leur
+            qualité et leur caractère.
+          </p>
+          <p class="section-atelier__signature">
+            — Les P'tits Bonheurs, Pornic
+          </p>
+          <a
+            href="/contact.html"
+            class="hero__cta"
+            style="margin-top: 2rem; display: inline-flex"
+            >Nous contacter
+            <svg viewBox="0 0 24 24">
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" /></svg
+          ></a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section CTA Newsletter / Call-to-action -->
+    <section class="section-cta">
+      <div class="section-cta__contenu">
+        <h2>Découvrez nos sélections en avant-première</h2>
+        <p>
+          Abonnez-vous pour recevoir nos derniers coups de cœur et nos
+          nouveautés.
+        </p>
+        <form
+          class="section-cta__form"
+          onsubmit="
+            event.preventDefault();
+            afficherToast('Merci pour votre inscription!');
+            this.reset();
+          "
+        >
+          <input type="email" placeholder="Votre email" required />
+          <button
+            type="submit"
+            class="hero__cta"
+            style="
+              display: inline-flex;
+              gap: 0.75rem;
+              width: 100%;
+              justify-content: center;
+            "
+          >
+            M'inscrire
+            <svg viewBox="0 0 24 24">
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Section Avis Clients -->
+    <section class="section-avis">
+      <div class="section-avis__container">
+        <div class="section-avis__header">
+          <p class="section__label">✦ Vos avis</p>
+          <h2 class="section__titre">Ce que nos clients en disent</h2>
+          <div class="section__trait"></div>
+        </div>
+        <div class="section-avis__grille">
+          <article class="avis-card">
+            <div class="avis-card__stars">★ ★ ★ ★ ★</div>
+            <p class="avis-card__texte">
+              "Bijoux magnifiques et tellement bien sélectionnés. J'ai trouvé
+              exactement la pièce que je cherchais. Le service est impeccable!"
+            </p>
+            <p class="avis-card__auteur">— Marie D., Pornic</p>
+          </article>
+          <article class="avis-card">
+            <div class="avis-card__stars">★ ★ ★ ★ ★</div>
+            <p class="avis-card__texte">
+              "Chaque pièce raconte une histoire unique. J'adore la qualité et
+              l'authenticité des créateurs. À bientôt pour ma prochaine visite!"
+            </p>
+            <p class="avis-card__auteur">— Sophie L., Nantes</p>
+          </article>
+          <article class="avis-card">
+            <div class="avis-card__stars">★ ★ ★ ★ ★</div>
+            <p class="avis-card__texte">
+              "Enfin une boutique qui comprend l'art des bijoux! Perles de
+              qualité, créateurs talentueux, accueil chaleureux. Parfait!"
+            </p>
+            <p class="avis-card__auteur">— Vincent M., La Baule</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="footer__inner">
+        <div>
+          <img
+            src="/logo.jpg"
+            alt="Les P'tits Bonheurs"
+            id="footer-logo"
+            style="
+              height: 60px;
+              margin-bottom: 1rem;
+              cursor: default;
+              user-select: none;
+            "
+          />
+          <p class="footer__tagline">
+            &#171;&nbsp;Des pièces qui portent une âme.&nbsp;&#187;
+          </p>
+          <div class="footer__reseaux">
+            <a
+              href="https://www.facebook.com/Perlespornic/"
+              target="_blank"
+              class="footer__reseau-lien"
+              aria-label="Facebook"
+              ><svg viewBox="0 0 24 24">
+                <path
+                  d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"
+                /></svg
+            ></a>
+            <a
+              href="mailto:contact@lesptitsbonheurs.fr"
+              class="footer__reseau-lien"
+              aria-label="Email"
+              ><svg viewBox="0 0 24 24">
+                <path
+                  d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+                />
+                <polyline points="22,6 12,13 2,6" /></svg
+            ></a>
+          </div>
+        </div>
+        <div>
+          <p class="footer__col-titre">Collections</p>
+          <ul class="footer__liens">
+            <li><a href="/produits.html">Tout voir</a></li>
+            <li><a href="/produits.html?categorie=bagues">Bagues</a></li>
+            <li><a href="/produits.html?categorie=colliers">Colliers</a></li>
+            <li>
+              <a href="/produits.html?categorie=boucles">Boucles d'oreilles</a>
+            </li>
+            <li><a href="/produits.html?categorie=pochettes">Pochettes</a></li>
+          </ul>
+        </div>
+        <div>
+          <p class="footer__col-titre">Navigation</p>
+          <ul class="footer__liens">
+            <li><a href="/">Accueil</a></li>
+            <li><a href="/produits.html">La Boutique</a></li>
+            <li><a href="/contact.html">Contact</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer__bas">
+        <span>© 2026 Les P'tits Bonheurs — Tous droits réservés</span>
+        <span>Paiement sécurisé par Stripe ❖</span>
+      </div>
+    </footer>
+
+    <div class="panier-overlay" id="panier-overlay" aria-hidden="true"></div>
+    <aside
+      class="panier-drawer"
+      id="panier-drawer"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Votre panier"
+    >
+      <div class="panier-drawer__header">
+        <h2 class="panier-drawer__titre">Votre Panier</h2>
+        <button
+          class="panier-drawer__fermer"
+          id="btn-fermer-panier"
+          aria-label="Fermer le panier"
+        >
+          <svg viewBox="0 0 24 24">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+      <div class="panier-drawer__liste" id="panier-liste">
+        <p class="panier-drawer__vide" id="panier-vide">
+          Votre panier est vide.<br /><em>Laissez-vous tenter...</em>
+        </p>
+      </div>
+      <div class="panier-drawer__pied">
+        <div class="panier-drawer__total">
+          <span class="panier-drawer__total-label">Total</span>
+          <span class="panier-drawer__total-montant" id="panier-total"
+            >0,00 €</span
+          >
+        </div>
+        <button class="btn-commander" id="btn-commander" disabled>
+          <svg viewBox="0 0 24 24">
+            <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+            <line x1="1" y1="10" x2="23" y2="10" />
+          </svg>
+          Passer commande
+        </button>
+        <p class="panier-drawer__note">🔒 Paiement 100 % sécurisé via Stripe</p>
+      </div>
+    </aside>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <div class="modal-overlay" id="modal-overlay" aria-hidden="true"></div>
+    <dialog class="modal-produit" id="modal-produit" aria-modal="true">
+      <button
+        class="modal-produit__fermer"
+        id="modal-fermer"
+        aria-label="Fermer"
+      >
+        <svg viewBox="0 0 24 24">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+      <div class="modal-produit__inner">
+        <div class="modal-produit__galerie">
+          <img id="modal-image" src="" alt="" class="modal-produit__img" />
+          <div
+            id="modal-thumbs"
+            class="modal-produit__thumbs"
+            style="display: none"
+          ></div>
+          <span class="modal-produit__categorie" id="modal-categorie"></span>
+        </div>
+        <div class="modal-produit__infos">
+          <h2 class="modal-produit__nom" id="modal-nom"></h2>
+          <p class="modal-produit__materiaux" id="modal-materiaux"></p>
+          <p class="modal-produit__description" id="modal-description"></p>
+          <div class="modal-produit__options" id="modal-bloc-couleurs">
+            <p class="modal-produit__option-label">
+              Couleur <span id="modal-couleur-choisie"></span>
+            </p>
+            <div class="modal-produit__choix" id="modal-couleurs"></div>
+          </div>
+          <div class="modal-produit__options" id="modal-bloc-tailles">
+            <p class="modal-produit__option-label">
+              Taille <span id="modal-taille-choisie"></span>
+            </p>
+            <div class="modal-produit__choix" id="modal-tailles"></div>
+          </div>
+          <div class="modal-produit__bas">
+            <span class="modal-produit__prix" id="modal-prix"></span>
+            <button class="btn-modal-ajouter" id="modal-btn-ajouter">
+              <svg viewBox="0 0 24 24">
+                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <path d="M16 10a4 4 0 01-8 0" />
+              </svg>
+              Ajouter au panier
+            </button>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
+    <script>
+      "use strict";
+      var panier = new Map();
+      var panierDrawer = document.getElementById("panier-drawer");
+      var panierOverlay = document.getElementById("panier-overlay");
+      var panierListe = document.getElementById("panier-liste");
+      var panierVide = document.getElementById("panier-vide");
+      var panierTotal = document.getElementById("panier-total");
+      var panierBadge = document.getElementById("panier-badge");
+      var btnOuvrirPanier = document.getElementById("btn-ouvrir-panier");
+      var btnFermerPanier = document.getElementById("btn-fermer-panier");
+      var btnCommander = document.getElementById("btn-commander");
+      var toast = document.getElementById("toast");
+      var modalOverlay = document.getElementById("modal-overlay");
+      var modalDialog = document.getElementById("modal-produit");
+      var modalFermer = document.getElementById("modal-fermer");
+      var modalImage = document.getElementById("modal-image");
+      var modalCategorie = document.getElementById("modal-categorie");
+      var modalNom = document.getElementById("modal-nom");
+      var modalMateriaux = document.getElementById("modal-materiaux");
+      var modalDesc = document.getElementById("modal-description");
+      var modalPrix = document.getElementById("modal-prix");
+      var modalBlocCouleurs = document.getElementById("modal-bloc-couleurs");
+      var modalBlocTailles = document.getElementById("modal-bloc-tailles");
+      var modalCouleurs = document.getElementById("modal-couleurs");
+      var modalTailles = document.getElementById("modal-tailles");
+      var modalCouleurChoisie = document.getElementById(
+        "modal-couleur-choisie",
+      );
+      var modalTailleChoisie = document.getElementById("modal-taille-choisie");
+      var modalBtnAjouter = document.getElementById("modal-btn-ajouter");
+      var modalProduitCourant = null;
+      var h = document.getElementById("header");
+      if (h)
+        window.addEventListener(
+          "scroll",
+          function () {
+            h.classList.toggle("scrolled", window.scrollY > 60);
+          },
+          { passive: true },
+        );
+      var sn = document.getElementById("sidenav");
+      var snt = document.getElementById("sidenav-toggle");
+      if (snt) {
+        snt.addEventListener("click", function () {
+          var o = sn.classList.toggle("ouvert");
+          snt.setAttribute("aria-expanded", String(o));
+        });
+        document.addEventListener("click", function (e) {
+          if (!sn.contains(e.target) && sn.classList.contains("ouvert")) {
+            sn.classList.remove("ouvert");
+            snt.setAttribute("aria-expanded", "false");
+          }
+        });
+      }
+      function ouvrirModale(produit) {
+        modalProduitCourant = produit;
+        var _fallback =
+          "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=800&q=80";
+        var _imgs = produit.images_json
+          ? JSON.parse(produit.images_json)
+          : produit.image_url
+            ? [produit.image_url]
+            : [];
+        if (!_imgs.length) _imgs = [_fallback];
+        modalImage.src = _imgs[0];
+        modalImage.alt = produit.nom;
+        var _thumbsEl = document.getElementById("modal-thumbs");
+        if (_imgs.length > 1) {
+          _thumbsEl.innerHTML = "";
+          _imgs.forEach(function (url, i) {
+            var tb = document.createElement("button");
+            tb.className = "modal-thumb" + (i === 0 ? " actif" : "");
+            tb.type = "button";
+            var tImg = document.createElement("img");
+            tImg.src = url;
+            tImg.alt = "";
+            tb.appendChild(tImg);
+            tb.addEventListener("click", function () {
+              _thumbsEl.querySelectorAll(".modal-thumb").forEach(function (b) {
+                b.classList.remove("actif");
+              });
+              tb.classList.add("actif");
+              modalImage.src = url;
+            });
+            _thumbsEl.appendChild(tb);
+          });
+          _thumbsEl.style.display = "flex";
+        } else {
+          _thumbsEl.innerHTML = "";
+          _thumbsEl.style.display = "none";
+        }
+        modalCategorie.textContent = libCategorie(produit.categorie);
+        modalNom.textContent = produit.nom;
+        modalMateriaux.textContent = produit.materiaux || "";
+        modalDesc.textContent = produit.description || "";
+        modalPrix.textContent = formaterPrix(produit.prix);
+        var couleurs = produit.couleurs ? JSON.parse(produit.couleurs) : [];
+        if (couleurs.length) {
+          modalBlocCouleurs.style.display = "block";
+          modalCouleurs.innerHTML = "";
+          modalCouleurChoisie.textContent = "";
+          couleurs.forEach(function (c, i) {
+            var btn = document.createElement("button");
+            btn.className = "option-pill" + (i === 0 ? " actif" : "");
+            btn.textContent = c;
+            if (i === 0) modalCouleurChoisie.textContent = "— " + c;
+            btn.addEventListener("click", function () {
+              modalCouleurs
+                .querySelectorAll(".option-pill")
+                .forEach(function (b) {
+                  b.classList.remove("actif");
+                });
+              btn.classList.add("actif");
+              modalCouleurChoisie.textContent = "— " + c;
+            });
+            modalCouleurs.appendChild(btn);
+          });
+        } else {
+          modalBlocCouleurs.style.display = "none";
+        }
+        var tailles = produit.tailles ? JSON.parse(produit.tailles) : [];
+        if (tailles.length) {
+          modalBlocTailles.style.display = "block";
+          modalTailles.innerHTML = "";
+          modalTailleChoisie.textContent = "";
+          tailles.forEach(function (t, i) {
+            var btn = document.createElement("button");
+            btn.className = "option-pill" + (i === 0 ? " actif" : "");
+            btn.textContent = t;
+            if (i === 0) modalTailleChoisie.textContent = "— " + t;
+            btn.addEventListener("click", function () {
+              modalTailles
+                .querySelectorAll(".option-pill")
+                .forEach(function (b) {
+                  b.classList.remove("actif");
+                });
+              btn.classList.add("actif");
+              modalTailleChoisie.textContent = "— " + t;
+            });
+            modalTailles.appendChild(btn);
+          });
+        } else {
+          modalBlocTailles.style.display = "none";
+        }
+        modalDialog.showModal();
+        modalOverlay.classList.add("ouvert");
+        document.body.style.overflow = "hidden";
+        modalFermer.focus();
+      }
+      function fermerModale() {
+        modalDialog.close();
+        modalOverlay.classList.remove("ouvert");
+        document.body.style.overflow = "";
+        modalProduitCourant = null;
+      }
+      modalFermer.addEventListener("click", fermerModale);
+      modalOverlay.addEventListener("click", fermerModale);
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && modalDialog.open) fermerModale();
+      });
+      modalBtnAjouter.addEventListener("click", function () {
+        if (!modalProduitCourant) return;
+        var cb = modalCouleurs.querySelector(".option-pill.actif");
+        var tb = modalTailles.querySelector(".option-pill.actif");
+        ajouterAuPanier(
+          modalProduitCourant,
+          cb ? cb.textContent : null,
+          tb ? tb.textContent : null,
+        );
+        fermerModale();
+      });
+      function chargerPanier() {
+        try {
+          var d = localStorage.getItem("ptits_bonheurs_panier");
+          if (d)
+            panier = new Map(
+              JSON.parse(d).map(function (i) {
+                return [
+                  i.produit.id +
+                    "__" +
+                    (i.couleur || "") +
+                    "__" +
+                    (i.taille || ""),
+                  i,
+                ];
+              }),
+            );
+        } catch (e) {}
+      }
+      function sauvegarderPanier() {
+        localStorage.setItem(
+          "ptits_bonheurs_panier",
+          JSON.stringify(Array.from(panier.values())),
+        );
+      }
+      function ajouterAuPanier(produit, couleur, taille) {
+        couleur = couleur || null;
+        taille = taille || null;
+        var cle = produit.id + "__" + (couleur || "") + "__" + (taille || "");
+        var ex = panier.get(cle);
+        if (ex) ex.quantite += 1;
+        else
+          panier.set(cle, {
+            produit: produit,
+            quantite: 1,
+            couleur: couleur,
+            taille: taille,
+          });
+        sauvegarderPanier();
+        mettreAJourUI();
+        var d = [couleur, taille].filter(Boolean).join(" · ");
+        afficherToast(
+          "❖ " + produit.nom + (d ? " (" + d + ")" : "") + " ajouté au panier",
+        );
+      }
+      function modifierQuantite(cle, delta) {
+        var item = panier.get(cle);
+        if (!item) return;
+        item.quantite += delta;
+        if (item.quantite <= 0) panier.delete(cle);
+        sauvegarderPanier();
+        mettreAJourUI();
+        rendreListePanier();
+      }
+      function supprimerDuPanier(cle) {
+        panier.delete(cle);
+        sauvegarderPanier();
+        mettreAJourUI();
+        rendreListePanier();
+      }
+      function totalPanier() {
+        var t = 0;
+        panier.forEach(function (v) {
+          t += v.produit.prix * v.quantite;
+        });
+        return t;
+      }
+      function nombreArticles() {
+        var n = 0;
+        panier.forEach(function (v) {
+          n += v.quantite;
+        });
+        return n;
+      }
+      function rendreListePanier() {
+        if (panier.size === 0) {
+          panierVide.style.display = "block";
+          panierListe
+            .querySelectorAll(".panier-article")
+            .forEach(function (el) {
+              el.remove();
+            });
+          return;
+        }
+        panierVide.style.display = "none";
+        panierListe.querySelectorAll(".panier-article").forEach(function (el) {
+          el.remove();
+        });
+        panier.forEach(function (v) {
+          var cle =
+            v.produit.id + "__" + (v.couleur || "") + "__" + (v.taille || "");
+          var detail = [v.couleur, v.taille].filter(Boolean).join(" · ");
+          var a = document.createElement("div");
+          a.className = "panier-article";
+          a.dataset.cle = cle;
+          a.innerHTML =
+            '<img class="panier-article__image" src="' +
+            (v.produit.image_url || "") +
+            '"/>' +
+            '<div><p class="panier-article__nom">' +
+            v.produit.nom +
+            "</p>" +
+            (detail
+              ? '<p class="panier-article__variante">' + detail + "</p>"
+              : "") +
+            '<p class="panier-article__prix-unitaire">' +
+            formaterPrix(v.produit.prix) +
+            " / pièce</p>" +
+            '<div class="panier-article__qte"><button data-action="moins" data-cle="' +
+            cle +
+            '">−</button><span>' +
+            v.quantite +
+            '</span><button data-action="plus" data-cle="' +
+            cle +
+            '">+</button></div></div>' +
+            '<button class="panier-article__supprimer" data-cle="' +
+            cle +
+            '">Retirer</button>';
+          a.querySelectorAll("[data-action]").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+              modifierQuantite(
+                btn.dataset.cle,
+                btn.dataset.action === "plus" ? 1 : -1,
+              );
+            });
+          });
+          a.querySelector(".panier-article__supprimer").addEventListener(
+            "click",
+            function () {
+              supprimerDuPanier(cle);
+            },
+          );
+          panierListe.appendChild(a);
+        });
+      }
+      function mettreAJourUI() {
+        var n = nombreArticles();
+        panierBadge.textContent = n;
+        panierBadge.classList.toggle("visible", n > 0);
+        panierTotal.textContent = formaterPrix(totalPanier());
+        btnCommander.disabled = panier.size === 0;
+        rendreListePanier();
+      }
+      function ouvrirPanier() {
+        panierDrawer.classList.add("ouvert");
+        panierOverlay.classList.add("ouvert");
+        document.body.style.overflow = "hidden";
+        btnFermerPanier.focus();
+      }
+      function fermerPanier() {
+        panierDrawer.classList.remove("ouvert");
+        panierOverlay.classList.remove("ouvert");
+        document.body.style.overflow = "";
+      }
+      btnOuvrirPanier.addEventListener("click", ouvrirPanier);
+      btnFermerPanier.addEventListener("click", fermerPanier);
+      panierOverlay.addEventListener("click", fermerPanier);
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") fermerPanier();
+      });
+      btnCommander.addEventListener("click", async function () {
+        if (panier.size === 0) return;
+        btnCommander.disabled = true;
+        btnCommander.textContent = "Redirection en cours...";
+        var items = Array.from(panier.values()).map(function (v) {
+          return { id: v.produit.id, quantite: v.quantite };
+        });
+        try {
+          var res = await fetch("/api/checkout", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ items: items }),
+          });
+          if (!res.ok) {
+            var err = await res.json();
+            throw new Error(err.error || "Erreur serveur");
+          }
+          var data = await res.json();
+          window.location.href = data.url;
+        } catch (err) {
+          afficherToast("Erreur : " + err.message, "erreur");
+          btnCommander.disabled = false;
+          btnCommander.innerHTML =
+            '<svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Passer commande';
+        }
+      });
+      var toastTimer;
+      function afficherToast(msg, type) {
+        clearTimeout(toastTimer);
+        toast.textContent = msg;
+        toast.className = "toast" + (type ? " " + type : "");
+        void toast.offsetWidth;
+        toast.classList.add("visible");
+        toastTimer = setTimeout(function () {
+          toast.classList.remove("visible");
+        }, 3000);
+      }
+      function formaterPrix(p) {
+        return new Intl.NumberFormat("fr-FR", {
+          style: "currency",
+          currency: "EUR",
+        }).format(p);
+      }
+      function libCategorie(cat) {
+        var m = {
+          bagues: "Bague",
+          colliers: "Collier",
+          boucles: "Boucles",
+          pochettes: "Pochette",
+          foulards: "Foulard",
+          epingles: "Épingle",
+          "porte-monnaie": "Porte-monnaie",
+        };
+        return m[cat] || cat;
+      }
+      chargerPanier();
+      mettreAJourUI();
+      (function () {
+        var logo = document.getElementById("footer-logo");
+        if (!logo) return;
+        logo.addEventListener("dblclick", function () {
+          window.location.href = "/admin.html";
+        });
+        var lpTimer;
+        logo.addEventListener(
+          "touchstart",
+          function (e) {
+            lpTimer = setTimeout(function () {
+              window.location.href = "/admin.html";
+            }, 600);
+          },
+          { passive: true },
+        );
+        logo.addEventListener("touchend", function () {
+          clearTimeout(lpTimer);
+        });
+        logo.addEventListener("touchmove", function () {
+          clearTimeout(lpTimer);
+        });
+      })();
+    </script>
+    <script>
+      "use strict";
+      var bandeau = document.getElementById("bandeau-paiement");
+      (function () {
+        var p = new URLSearchParams(window.location.search).get("paiement");
+        if (p === "succes") {
+          bandeau.textContent = "❖ Merci pour votre commande !";
+          bandeau.className = "bandeau-paiement succes";
+          panier.clear();
+          sauvegarderPanier();
+          window.history.replaceState({}, "", "/");
+        } else if (p === "annule") {
+          bandeau.textContent =
+            "Commande annulée. Vos articles restent dans le panier.";
+          bandeau.className = "bandeau-paiement annule";
+          window.history.replaceState({}, "", "/");
+        }
+      })();
+      async function chargerPhares() {
+        try {
+          var res = await fetch("/api/produits");
+          var all = await res.json();
+          afficherCartes(
+            all.slice(0, 4),
+            document.getElementById("grille-phares"),
+            all,
+          );
+
+          // Charger les bandeaux par catégorie
+          var perles = all
+            .filter(function (p) {
+              return p.categorie === "perles";
+            })
+            .slice(0, 3);
+          var maroquinerie = all
+            .filter(function (p) {
+              return p.categorie === "maroquinerie";
+            })
+            .slice(0, 3);
+          var bijoux = all
+            .filter(function (p) {
+              return p.categorie === "bijoux-createurs";
+            })
+            .slice(0, 3);
+
+          if (perles.length)
+            afficherCartesBandeau(
+              perles,
+              document.getElementById("grille-bandeau-perles"),
+              all,
+            );
+          if (maroquinerie.length)
+            afficherCartesBandeau(
+              maroquinerie,
+              document.getElementById("grille-bandeau-maroquinerie"),
+              all,
+            );
+          if (bijoux.length)
+            afficherCartesBandeau(
+              bijoux,
+              document.getElementById("grille-bandeau-bijoux"),
+              all,
+            );
+
+          // Charger les marques
+          var kharmari = all
+            .filter(function (p) {
+              return (
+                p.nom.toLowerCase().includes("kharmari") ||
+                (p.marque && p.marque.toLowerCase() === "kharmari")
+              );
+            })
+            .slice(0, 3);
+          var charly = all
+            .filter(function (p) {
+              return (
+                p.nom.toLowerCase().includes("charly") ||
+                p.nom.toLowerCase().includes("therapy") ||
+                (p.marque && p.marque.toLowerCase().includes("charly"))
+              );
+            })
+            .slice(0, 3);
+
+          if (kharmari.length)
+            afficherCartesBandeau(
+              kharmari,
+              document.getElementById("grille-kharmari"),
+              all,
+            );
+          if (charly.length)
+            afficherCartesBandeau(
+              charly,
+              document.getElementById("grille-charly"),
+              all,
+            );
+        } catch (e) {
+          document.getElementById("grille-phares").innerHTML =
+            '<p style="padding:3rem;color:var(--gris);text-align:center;grid-column:1/-1">Impossible de charger les produits.</p>';
+        }
+      }
+
+      function afficherCartes(produits, grille, allProduits) {
+        var ldr = document.getElementById("loader-phares");
+        if (ldr) ldr.remove();
+        if (!produits.length) {
+          grille.innerHTML = "";
+          return;
+        }
+        grille.innerHTML = produits
+          .map(function (p) {
+            return (
+              '<article class="carte-produit" data-id="' +
+              p.id +
+              '" style="cursor:pointer">' +
+              '<div class="carte-produit__image"><img src="' +
+              (p.image_url ||
+                "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=600&q=70") +
+              '" alt="' +
+              p.nom +
+              '" loading="lazy"/>' +
+              '<span class="carte-produit__categorie">' +
+              libCategorie(p.categorie) +
+              "</span>" +
+              (p.stock <= 2
+                ? '<span class="carte-produit__stock-alerte">Dernière' +
+                  (p.stock > 1 ? "s" : "") +
+                  " pièce" +
+                  (p.stock > 1 ? "s" : "") +
+                  "</span>"
+                : "") +
+              '</div><div class="carte-produit__corps"><h3 class="carte-produit__nom">' +
+              p.nom +
+              "</h3>" +
+              '<p class="carte-produit__materiaux">' +
+              (p.materiaux || "") +
+              "</p>" +
+              '<div class="carte-produit__bas"><span class="carte-produit__prix">' +
+              formaterPrix(p.prix) +
+              "</span>" +
+              '<button class="btn-ajouter" data-id="' +
+              p.id +
+              '"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Ajouter</button>' +
+              "</div></div></article>"
+            );
+          })
+          .join("");
+        var obs = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (e, i) {
+              if (e.isIntersecting) {
+                setTimeout(function () {
+                  e.target.classList.add("visible");
+                }, i * 80);
+                obs.unobserve(e.target);
+              }
+            });
+          },
+          { threshold: 0.1 },
+        );
+        grille.querySelectorAll(".carte-produit").forEach(function (c) {
+          obs.observe(c);
+          c.addEventListener("click", function (e) {
+            if (e.target.closest(".btn-ajouter")) return;
+            var p = (allProduits || produits).find(function (x) {
+              return x.id === parseInt(c.dataset.id);
+            });
+            if (p) ouvrirModale(p);
+          });
+        });
+        grille.querySelectorAll(".btn-ajouter").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var p = (allProduits || produits).find(function (x) {
+              return x.id === parseInt(btn.dataset.id);
+            });
+            if (p) ajouterAuPanier(p, null, null);
+          });
+        });
+      }
+
+      function afficherCartesBandeau(produits, grille, allProduits) {
+        var ldr = grille.querySelector(".produits-loader");
+        if (ldr) ldr.remove();
+        if (!produits.length) {
+          grille.innerHTML = "";
+          return;
+        }
+        grille.innerHTML = produits
+          .map(function (p) {
+            return (
+              '<article class="carte-produit" data-id="' +
+              p.id +
+              '" style="cursor:pointer">' +
+              '<div class="carte-produit__image"><img src="' +
+              (p.image_url ||
+                "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=600&q=70") +
+              '" alt="' +
+              p.nom +
+              '" loading="lazy"/>' +
+              '<span class="carte-produit__categorie">' +
+              libCategorie(p.categorie) +
+              "</span>" +
+              (p.stock <= 2
+                ? '<span class="carte-produit__stock-alerte">Dernière' +
+                  (p.stock > 1 ? "s" : "") +
+                  " pièce" +
+                  (p.stock > 1 ? "s" : "") +
+                  "</span>"
+                : "") +
+              '</div><div class="carte-produit__corps"><h3 class="carte-produit__nom">' +
+              p.nom +
+              "</h3>" +
+              '<p class="carte-produit__materiaux">' +
+              (p.materiaux || "") +
+              "</p>" +
+              '<div class="carte-produit__bas"><span class="carte-produit__prix">' +
+              formaterPrix(p.prix) +
+              "</span>" +
+              '<button class="btn-ajouter" data-id="' +
+              p.id +
+              '"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>' +
+              "</div></div></article>"
+            );
+          })
+          .join("");
+        var obs = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (e, i) {
+              if (e.isIntersecting) {
+                setTimeout(function () {
+                  e.target.classList.add("visible");
+                }, i * 80);
+                obs.unobserve(e.target);
+              }
+            });
+          },
+          { threshold: 0.1 },
+        );
+        grille.querySelectorAll(".carte-produit").forEach(function (c) {
+          obs.observe(c);
+          c.addEventListener("click", function (e) {
+            if (e.target.closest(".btn-ajouter")) return;
+            var p = (allProduits || produits).find(function (x) {
+              return x.id === parseInt(c.dataset.id);
+            });
+            if (p) ouvrirModale(p);
+          });
+        });
+        grille.querySelectorAll(".btn-ajouter").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var p = (allProduits || produits).find(function (x) {
+              return x.id === parseInt(btn.dataset.id);
+            });
+            if (p) ajouterAuPanier(p, null, null);
+          });
+        });
+      }
+      chargerPhares();
+    </script>
+  </body>
+</html>

@@ -25,7 +25,7 @@ function redirectCreateProductError(message: string): never {
 async function ensureAdmin() {
   const session = await auth();
   if (!session?.user || session.user.role !== "ADMIN") {
-    redirect("/login");
+    redirect("/compte");
   }
 }
 

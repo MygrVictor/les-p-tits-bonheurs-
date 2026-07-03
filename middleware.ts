@@ -6,15 +6,18 @@ const authPaths = ["/api/auth"];
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname === "/admin/login") {
-    return NextResponse.redirect(new URL("/login", request.url));
+  // Connexion unique et simple : un seul point d'entrée (/compte) pour tout
+  // le monde, client comme admin. Les anciennes routes de connexion séparées
+  // redirigent toutes vers ce même formulaire — une seule connexion suffit.
+  if (
+    pathname === "/login" ||
+    pathname === "/admin/login" ||
+    pathname === "/admin.html"
+  ) {
+    return NextResponse.redirect(new URL("/compte", request.url));
   }
 
-  if (pathname === "/admin.html") {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-
-  // Protège tout le back-office : redirige vers /login si le visiteur n'a
+  // Protège tout le back-office : redirige vers /compte si le visiteur n'a
   // pas de session valide avec le rôle ADMIN. Fait ici (middleware) plutôt
   // que dans le layout car redirect() dans un layout ne bloque pas
   // fiablement les navigations directes/rechargements de page.
@@ -25,7 +28,7 @@ export async function middleware(request: NextRequest) {
     });
 
     if (!token || token.role !== "ADMIN") {
-      const loginUrl = new URL("/login", request.url);
+      const loginUrl = new URL("/compte", request.url);
       return NextResponse.redirect(loginUrl);
     }
   }

@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { updateOrderStatus } from "@/app/(admin)/admin/actions";
 
+export const dynamic = "force-dynamic";
+
 function formatCurrency(cents: number) {
   return `${(cents / 100).toFixed(2)} €`;
 }

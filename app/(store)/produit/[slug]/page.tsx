@@ -5,20 +5,7 @@ import { slugSchema } from "@/lib/validations/catalog";
 import { prisma } from "@/lib/prisma";
 import { AddToCartActions } from "@/components/store/add-to-cart";
 
-export const revalidate = 900;
-
-export function generateStaticParams() {
-  return [
-    "product-1",
-    "product-2",
-    "product-3",
-    "product-4",
-    "product-5",
-    "product-6",
-    "product-7",
-    "product-8",
-  ].map((slug) => ({ slug }));
-}
+export const dynamic = "force-dynamic";
 
 function toStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];

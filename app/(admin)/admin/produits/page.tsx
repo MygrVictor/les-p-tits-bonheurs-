@@ -2,6 +2,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { updateProductStock } from "@/app/(admin)/admin/actions";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminProductsPage() {
   const products = await prisma.product.findMany({
     include: {

@@ -1,5 +1,7 @@
 import { getAdminDashboardData } from "@/lib/backoffice/dashboard";
 
+export const dynamic = "force-dynamic";
+
 function formatCurrency(cents: number) {
   return `${(cents / 100).toFixed(2)} €`;
 }

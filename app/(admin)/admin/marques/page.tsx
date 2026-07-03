@@ -5,6 +5,8 @@ import {
   updateBrand,
 } from "@/app/(admin)/admin/actions";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminBrandsPage() {
   const brands = await prisma.brand.findMany({
     include: { _count: { select: { products: true } } },

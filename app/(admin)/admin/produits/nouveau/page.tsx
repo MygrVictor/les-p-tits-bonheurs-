@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { createProduct } from "@/app/(admin)/admin/actions";
 
+export const dynamic = "force-dynamic";
+
 export default async function NewProductPage({
   searchParams,
 }: {

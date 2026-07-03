@@ -5,7 +5,7 @@ import { BijouxBentoFilters } from "../../../../components/store/bijoux-bento-fi
 import { productFilterSchema, slugSchema } from "@/lib/validations/catalog";
 import { prisma } from "@/lib/prisma";
 
-export const revalidate = 900;
+export const dynamic = "force-dynamic";
 
 const BIJOU_MATERIALS = ["acier-inox", "plaque-or"] as const;
 const BIJOU_TYPES = ["collier", "bracelet", "boucles", "autres"] as const;

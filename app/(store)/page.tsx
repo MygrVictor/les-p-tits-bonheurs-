@@ -5,7 +5,7 @@ import { BandeauCharly } from "@/components/store/bandeau-charly";
 import { BandeauZag } from "@/components/store/bandeau-zag";
 import { BentoBoutique } from "@/components/store/bento-boutique";
 
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 export default function StoreHomePage() {
   return (

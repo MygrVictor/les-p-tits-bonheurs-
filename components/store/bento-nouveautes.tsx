@@ -103,7 +103,7 @@ export async function BentoNouveautes() {
           </h2>
         </div>
         <Link
-          href="/categorie/bijoux"
+          href="/nouveautes"
           className="flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-ink transition hover:border-primary hover:text-primary"
         >
           Tout voir <ArrowRight size={13} />
@@ -148,7 +148,7 @@ export async function BentoNouveautes() {
             </p>
           </div>
           <Link
-            href="/categorie/bijoux"
+            href="/nouveautes"
             className="mt-6 flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white transition hover:bg-primary-hover"
           >
             Découvrir <ArrowRight size={15} />

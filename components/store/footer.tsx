@@ -3,12 +3,14 @@ import { Instagram, Mail, MapPin } from "lucide-react";
 
 const navLinks = [
   { label: "Accueil", href: "/" },
-  { label: "Notre histoire", href: "/a-propos" },
-  { label: "Bijoux", href: "/categorie/bijoux" },
-  { label: "Mode et Accessoires", href: "/categorie/lifestyle" },
-  { label: "Décoration", href: "/categorie/decoration-et-maison" },
+  { label: "Nouveautés", href: "/nouveautes" },
+  { label: "Bijouterie", href: "/categorie/bijouterie" },
+  { label: "Perlerie", href: "/categorie/perlerie" },
+  { label: "Jeux & DIY", href: "/categorie/jeux-diy" },
+  { label: "Lifestyle", href: "/categorie/lifestyle" },
+  { label: "Décoration & Maison", href: "/categorie/decoration-maison" },
   { label: "Papeterie", href: "/categorie/papeterie" },
-  { label: "Sacs", href: "/categorie/lifestyle" },
+  { label: "Notre histoire", href: "/a-propos" },
   { label: "Contact", href: "/contact" },
 ];
 

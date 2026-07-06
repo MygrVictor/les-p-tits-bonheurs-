@@ -8,7 +8,7 @@ import { useCartStore, selectCartCount } from "@/lib/cart-store";
 const navItems = [
   { href: "/", icon: Home, label: "Accueil", badge: false },
   {
-    href: "/categorie/bijoux",
+    href: "/categorie/bijouterie",
     icon: LayoutGrid,
     label: "Boutique",
     badge: false,

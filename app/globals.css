@@ -49,3 +49,13 @@ textarea {
 ::selection {
   background: rgba(217, 120, 149, 0.18);
 }
+
+/* Masque la scrollbar d'un conteneur défilant (carrousels), tout en
+   gardant le scroll natif (souris/trackpad/swipe) pleinement fonctionnel. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

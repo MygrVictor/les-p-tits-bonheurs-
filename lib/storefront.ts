@@ -162,26 +162,3 @@ export async function getBentoStoreProducts(
     })
     .slice(0, limit);
 }
-
-/**
- * Produits « Nouveautés » pour le carrousel d'accueil : uniquement les
- * produits réellement marqués `isNew` et encore dans la fenêtre des 90
- * jours (même règle que la page /nouveautes), toutes familles confondues.
- * Contrairement à getBentoStoreProducts, ne complète pas avec d'anciens
- * produits actifs si moins de `limit` nouveautés existent — un carrousel
- * gère très bien un nombre variable d'éléments (contrairement à une grille
- * bento à emplacements fixes).
- */
-export async function getNewArrivals(limit = 12): Promise<StorefrontProduct[]> {
-  const dbProducts = await prisma.product.findMany({
-    where: { status: "ACTIVE", isNew: true },
-    include: { variants: true },
-    orderBy: { createdAt: "desc" },
-    take: 60,
-  });
-
-  return dbProducts
-    .map(mapDbProduct)
-    .filter((product) => product.isNew)
-    .slice(0, limit);
-}

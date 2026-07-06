@@ -1,60 +1,48 @@
 import Link from "next/link";
-import Image from "next/image";
 
-type Material = "acier-inox" | "plaque-or";
-type BijouType = "collier" | "bracelet" | "boucles" | "autres";
+type BijouType =
+  | "collier"
+  | "bracelet"
+  | "boucles"
+  | "bagues"
+  | "boites"
+  | "autres";
 type PriceRange = "0-39" | "40-59" | "60+";
-
-const MATERIAL_OPTIONS: {
-  id: Material;
-  label: string;
-  helper: string;
-}[] = [
-  {
-    id: "acier-inox",
-    label: "Acier inox",
-    helper: "Résistant et durable",
-  },
-  {
-    id: "plaque-or",
-    label: "Plaqué or",
-    helper: "Finition dorée",
-  },
-];
 
 const TYPE_OPTIONS: {
   id: BijouType;
   label: string;
   helper: string;
-  image: string;
 }[] = [
   {
     id: "collier",
     label: "Collier",
     helper: "Tous les colliers",
-    image:
-      "https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=1200&q=80",
   },
   {
     id: "bracelet",
     label: "Bracelet",
     helper: "Tous les bracelets",
-    image:
-      "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=1200&q=80",
   },
   {
     id: "boucles",
-    label: "Boucles d’oreilles",
+    label: "Boucles d'oreilles",
     helper: "Toutes les boucles",
-    image:
-      "https://images.unsplash.com/photo-1630019852942-f89202989a59?w=1200&q=80",
+  },
+  {
+    id: "bagues",
+    label: "Bagues",
+    helper: "Toutes les bagues",
+  },
+  {
+    id: "boites",
+    label: "Boîtes à bijoux",
+    helper: "Rangement & écrins",
   },
   {
     id: "autres",
     label: "Autres bijoux",
     helper: "Le reste de la sélection",
-    image:
-      "https://images.unsplash.com/photo-1611652022419-a9419f74343d?w=1200&q=80",
   },
 ];
 
@@ -85,15 +73,12 @@ const PRICE_OPTIONS: {
 ];
 
 function buildHref(
-  materials: Material[],
+  categoryHref: string,
   type: BijouType | null,
   brands: string[],
   price: PriceRange | null,
 ) {
   const params = new URLSearchParams();
-  if (materials.length > 0) {
-    params.set("matiere", materials.join(","));
-  }
   if (type) {
     params.set("type", type);
   }
@@ -104,17 +89,17 @@ function buildHref(
     params.set("prix", price);
   }
   const query = params.toString();
-  return query ? `/categorie/bijoux?${query}` : "/categorie/bijoux";
+  return query ? `${categoryHref}?${query}` : categoryHref;
 }
 
 export function BijouxBentoFilters({
-  selectedMaterials,
+  categoryHref,
   selectedType,
   selectedBrands,
   selectedPrice,
   brandOptions,
 }: Readonly<{
-  selectedMaterials: Material[];
+  categoryHref: string;
   selectedType: BijouType | null;
   selectedBrands: string[];
   selectedPrice: PriceRange | null;
@@ -131,39 +116,6 @@ export function BijouxBentoFilters({
 
       <div className="space-y-2 border-t border-neutral-100 pt-4">
         <p className="text-xs font-semibold uppercase tracking-widest text-neutral-500">
-          Matière
-        </p>
-        <div className="space-y-2">
-          {MATERIAL_OPTIONS.map((material) => {
-            const active = selectedMaterials.includes(material.id);
-            const nextMaterials = active
-              ? selectedMaterials.filter((item) => item !== material.id)
-              : [...selectedMaterials, material.id];
-
-            return (
-              <Link
-                key={material.id}
-                href={buildHref(
-                  nextMaterials,
-                  selectedType,
-                  selectedBrands,
-                  selectedPrice,
-                )}
-                className={`block rounded-lg border px-3 py-2 text-sm font-semibold transition ${
-                  active
-                    ? "border-primary bg-primary/15 text-ink ring-1 ring-primary/20"
-                    : "border-neutral-200 bg-white text-neutral-700 hover:border-primary hover:bg-neutral-50"
-                }`}
-              >
-                {material.label}
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="space-y-2 border-t border-neutral-100 pt-4">
-        <p className="text-xs font-semibold uppercase tracking-widest text-neutral-500">
           Type
         </p>
         <div className="space-y-2">
@@ -175,7 +127,7 @@ export function BijouxBentoFilters({
               <Link
                 key={type.id}
                 href={buildHref(
-                  selectedMaterials,
+                  categoryHref,
                   nextType,
                   selectedBrands,
                   selectedPrice,
@@ -208,7 +160,7 @@ export function BijouxBentoFilters({
               <Link
                 key={brand.id}
                 href={buildHref(
-                  selectedMaterials,
+                  categoryHref,
                   selectedType,
                   nextBrands,
                   selectedPrice,
@@ -239,7 +191,7 @@ export function BijouxBentoFilters({
               <Link
                 key={price.id}
                 href={buildHref(
-                  selectedMaterials,
+                  categoryHref,
                   selectedType,
                   selectedBrands,
                   nextPrice,
@@ -260,7 +212,7 @@ export function BijouxBentoFilters({
 
       <div className="flex justify-end">
         <Link
-          href="/categorie/bijoux"
+          href={categoryHref}
           className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-600 transition hover:border-primary hover:text-ink"
         >
           Réinitialiser les filtres

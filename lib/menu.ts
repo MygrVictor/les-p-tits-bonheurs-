@@ -12,41 +12,75 @@ export type MainMenuItem = MenuLink & {
   sections?: MenuSection[];
 };
 
+/**
+ * Menu principal — organisé par familles de produits (juillet 2026).
+ *
+ * Important : les marques ne figurent JAMAIS ici. Elles sont proposées
+ * uniquement via les filtres de chaque page catégorie (filtre « Marque »).
+ * Ce fichier ne doit donc lister que des familles/types de produits.
+ */
 export const storefrontMainMenu: MainMenuItem[] = [
   {
-    label: "Bijoux",
-    href: "/categorie/bijoux",
+    label: "Nouveautés",
+    href: "/nouveautes",
+  },
+  {
+    label: "Bijouterie",
+    href: "/categorie/bijouterie",
     sections: [
       {
         title: "Acier inoxydable",
         links: [
-          { label: "Voir toute la collection", href: "/categorie/bijoux" },
-          { label: "ZAG Bijoux", href: "/categorie/bijoux" },
-          { label: "Notre sélection acier", href: "/categorie/bijoux" },
-          { label: "Guide des pierres", href: "/categorie/bijoux" },
-          { label: "Marques", href: "/categorie/bijoux" },
-          { label: "ZAG Bijoux", href: "/categorie/bijoux" },
-          { label: "Notre sélection acier", href: "/categorie/bijoux" },
+          {
+            label: "Voir tout",
+            href: "/categorie/bijouterie-acier-inoxydable",
+          },
+          {
+            label: "Boucles d'oreilles",
+            href: "/categorie/bijouterie-acier-inoxydable?type=boucles",
+          },
+          {
+            label: "Bracelets",
+            href: "/categorie/bijouterie-acier-inoxydable?type=bracelet",
+          },
+          {
+            label: "Colliers",
+            href: "/categorie/bijouterie-acier-inoxydable?type=collier",
+          },
+          {
+            label: "Bagues",
+            href: "/categorie/bijouterie-acier-inoxydable?type=bagues",
+          },
+          {
+            label: "Boîtes à bijoux",
+            href: "/categorie/bijouterie-acier-inoxydable?type=boites",
+          },
         ],
       },
       {
-        title: "Plaqué or",
+        title: "Plaqué Or",
         links: [
-          { label: "Voir toute la collection", href: "/categorie/bijoux" },
-          { label: "LA2L", href: "/categorie/bijoux" },
-          { label: "Au Fil de l'Eau", href: "/categorie/bijoux" },
-          { label: "Mya Bay", href: "/categorie/bijoux" },
-          { label: "Chloé Lou", href: "/categorie/bijoux" },
-          { label: "Mayaaz", href: "/categorie/bijoux" },
-          { label: "Habaha", href: "/categorie/bijoux" },
-          { label: "Guide des pierres", href: "/categorie/bijoux" },
-          { label: "Marques", href: "/categorie/bijoux" },
-          { label: "LA2L", href: "/categorie/bijoux" },
-          { label: "Au Fil de l'Eau", href: "/categorie/bijoux" },
-          { label: "Mya Bay", href: "/categorie/bijoux" },
-          { label: "Chloé Lou", href: "/categorie/bijoux" },
-          { label: "Mayaaz", href: "/categorie/bijoux" },
-          { label: "Habaha", href: "/categorie/bijoux" },
+          { label: "Voir tout", href: "/categorie/bijouterie-plaque-or" },
+          {
+            label: "Boucles d'oreilles",
+            href: "/categorie/bijouterie-plaque-or?type=boucles",
+          },
+          {
+            label: "Bracelets",
+            href: "/categorie/bijouterie-plaque-or?type=bracelet",
+          },
+          {
+            label: "Colliers",
+            href: "/categorie/bijouterie-plaque-or?type=collier",
+          },
+          {
+            label: "Bagues",
+            href: "/categorie/bijouterie-plaque-or?type=bagues",
+          },
+          {
+            label: "Boîtes à bijoux",
+            href: "/categorie/bijouterie-plaque-or?type=boites",
+          },
         ],
       },
     ],
@@ -58,37 +92,66 @@ export const storefrontMainMenu: MainMenuItem[] = [
       {
         title: "Perlerie",
         links: [
-          { label: "Voir toute la collection", href: "/categorie/perlerie" },
-          { label: "Perles", href: "/categorie/perlerie" },
-          { label: "Charms", href: "/categorie/perlerie" },
-          { label: "Apprêts", href: "/categorie/perlerie" },
-          { label: "Chaînes", href: "/categorie/perlerie" },
-          { label: "Fils", href: "/categorie/perlerie" },
-          { label: "Outils", href: "/categorie/perlerie" },
-          { label: "Kits DIY", href: "/categorie/perlerie" },
-          { label: "Tutoriels", href: "/categorie/perlerie" },
+          { label: "Voir tout", href: "/categorie/perlerie" },
+          { label: "Perles", href: "/categorie/perlerie?type=perles" },
+          { label: "Charms", href: "/categorie/perlerie?type=charms" },
+          { label: "Apprêts", href: "/categorie/perlerie?type=apprets" },
+          { label: "Chaînes", href: "/categorie/perlerie?type=chaines" },
+          { label: "Fils", href: "/categorie/perlerie?type=fils" },
+          { label: "Outils", href: "/categorie/perlerie?type=outils" },
+          { label: "Kits DIY", href: "/categorie/perlerie?type=kits" },
         ],
       },
     ],
   },
   {
-    label: "DIY & Loisirs créatifs",
-    href: "/categorie/diy-loisirs-creatifs",
+    label: "Jeux & DIY",
+    href: "/categorie/jeux-diy",
     sections: [
       {
-        title: "Marques",
+        title: "Puzzles",
         links: [
           {
-            label: "La Petite Épicerie",
-            href: "/categorie/diy-loisirs-creatifs",
+            label: "100 pièces",
+            href: "/categorie/jeux-diy-puzzles?pieces=100",
           },
-          { label: "Djeco", href: "/categorie/diy-loisirs-creatifs" },
-          { label: "Piece & Love", href: "/categorie/diy-loisirs-creatifs" },
-          { label: "Piecely", href: "/categorie/diy-loisirs-creatifs" },
           {
-            label: "All The Way To Say",
-            href: "/categorie/diy-loisirs-creatifs",
+            label: "500 pièces",
+            href: "/categorie/jeux-diy-puzzles?pieces=500",
           },
+          {
+            label: "1000 pièces",
+            href: "/categorie/jeux-diy-puzzles?pieces=1000",
+          },
+          {
+            label: "1500 pièces",
+            href: "/categorie/jeux-diy-puzzles?pieces=1500",
+          },
+          {
+            label: "Tapis de puzzle",
+            href: "/categorie/jeux-diy-puzzles?type=tapis",
+          },
+        ],
+      },
+      {
+        title: "Autres familles",
+        links: [
+          { label: "Jeux", href: "/categorie/jeux-diy-jeux" },
+          {
+            label: "Peinture au numéro",
+            href: "/categorie/jeux-diy-peinture-au-numero",
+          },
+          {
+            label: "Diamond Painting",
+            href: "/categorie/jeux-diy-diamond-painting",
+          },
+          {
+            label: "Carnets à aquarelle",
+            href: "/categorie/jeux-diy-carnets-aquarelle",
+          },
+          { label: "Pastels", href: "/categorie/jeux-diy-pastels" },
+          { label: "Kits DIY", href: "/categorie/jeux-diy-kits-diy" },
+          { label: "Kits bijoux", href: "/categorie/jeux-diy-kits-bijoux" },
         ],
       },
     ],
@@ -98,60 +161,118 @@ export const storefrontMainMenu: MainMenuItem[] = [
     href: "/categorie/lifestyle",
     sections: [
       {
-        title: "Lunettes",
-        links: [{ label: "Charlie Therapy", href: "/categorie/lifestyle" }],
-      },
-      {
-        title: "Foulards",
-        links: [
-          { label: "Bellemme", href: "/categorie/lifestyle" },
-          { label: "Les Belles Vagabondes", href: "/categorie/lifestyle" },
-        ],
-      },
-      {
-        title: "Accessoires",
-        links: [{ label: "Coucou Suzette", href: "/categorie/lifestyle" }],
-      },
-      {
         title: "Maroquinerie",
         links: [
-          { label: "Hindbag", href: "/categorie/lifestyle" },
-          { label: "Récitem", href: "/categorie/lifestyle" },
-          { label: "Paul Marius", href: "/categorie/lifestyle" },
+          {
+            label: "Voir tout",
+            href: "/categorie/lifestyle-maroquinerie",
+          },
+          {
+            label: "Bananes",
+            href: "/categorie/lifestyle-maroquinerie?type=bananes",
+          },
+          {
+            label: "Sacs lune",
+            href: "/categorie/lifestyle-maroquinerie?type=sacs-lune",
+          },
+          {
+            label: "Sacs week-end",
+            href: "/categorie/lifestyle-maroquinerie?type=sacs-week-end",
+          },
+          {
+            label: "Porte-monnaie",
+            href: "/categorie/lifestyle-maroquinerie?type=porte-monnaie",
+          },
         ],
       },
       {
-        title: "Sacs",
-        links: [{ label: "Crazy Lou", href: "/categorie/lifestyle" }],
+        title: "Accessoires cheveux",
+        links: [
+          {
+            label: "Voir tout",
+            href: "/categorie/lifestyle-accessoires-cheveux",
+          },
+          {
+            label: "Pinces",
+            href: "/categorie/lifestyle-accessoires-cheveux?type=pinces",
+          },
+          {
+            label: "Mini pinces",
+            href: "/categorie/lifestyle-accessoires-cheveux?type=mini-pinces",
+          },
+          {
+            label: "Barrettes",
+            href: "/categorie/lifestyle-accessoires-cheveux?type=barrettes",
+          },
+        ],
+      },
+      {
+        title: "Foulards & Bandeaux",
+        links: [
+          {
+            label: "Voir tout",
+            href: "/categorie/lifestyle-foulards-bandeaux",
+          },
+          {
+            label: "Carrés de soie 50×50",
+            href: "/categorie/lifestyle-foulards-bandeaux?type=carres-50",
+          },
+          {
+            label: "Foulards 100×100",
+            href: "/categorie/lifestyle-foulards-bandeaux?type=foulards-100",
+          },
+          {
+            label: "Bandeaux de soie",
+            href: "/categorie/lifestyle-foulards-bandeaux?type=bandeaux",
+          },
+        ],
+      },
+      {
+        title: "Autres familles",
+        links: [
+          { label: "Chaussettes", href: "/categorie/lifestyle-chaussettes" },
+          { label: "Pin's", href: "/categorie/lifestyle-pins" },
+          {
+            label: "Trousses de toilette",
+            href: "/categorie/lifestyle-trousses-toilette",
+          },
+        ],
       },
     ],
   },
   {
     label: "Décoration & Maison",
-    href: "/categorie/decoration-et-maison",
+    href: "/categorie/decoration-maison",
     sections: [
       {
-        title: "Art de la table",
-        links: [{ label: "Rice", href: "/categorie/decoration-et-maison" }],
-      },
-      {
-        title: "Décoration",
+        title: "Univers",
         links: [
           {
-            label: "Studio Roof",
-            href: "/categorie/decoration-et-maison",
+            label: "Arts de la table",
+            href: "/categorie/decoration-maison-arts-table",
           },
-          { label: "Kencre", href: "/categorie/decoration-et-maison" },
-          {
-            label: "All The Way To Say",
-            href: "/categorie/decoration-et-maison",
-          },
+          { label: "Bougies", href: "/categorie/decoration-maison-bougies" },
         ],
       },
       {
-        title: "Gourdes & isothermes",
+        title: "Décoration murale",
         links: [
-          { label: "Letterbox", href: "/categorie/decoration-et-maison" },
+          {
+            label: "Voir tout",
+            href: "/categorie/decoration-maison-murale",
+          },
+          {
+            label: "Affiches",
+            href: "/categorie/decoration-maison-murale?type=affiches",
+          },
+          {
+            label: "Objets muraux",
+            href: "/categorie/decoration-maison-murale?type=objets",
+          },
+          {
+            label: "Plaques décoratives",
+            href: "/categorie/decoration-maison-murale?type=plaques",
+          },
         ],
       },
     ],
@@ -159,16 +280,10 @@ export const storefrontMainMenu: MainMenuItem[] = [
   {
     label: "Papeterie",
     href: "/categorie/papeterie",
-    sections: [
-      {
-        title: "Marques",
-        links: [
-          { label: "All The Way To Say", href: "/categorie/papeterie" },
-          { label: "Carte d'Art", href: "/categorie/papeterie" },
-        ],
-      },
-    ],
   },
   { label: "Acheter par couleur", href: "/categorie/couleurs" },
-  { label: "Coups de cœur Pauline", href: "/categorie/coups-de-coeur" },
+  {
+    label: "❤️ Les coups de cœur de Pauline",
+    href: "/categorie/coups-de-coeur",
+  },
 ];

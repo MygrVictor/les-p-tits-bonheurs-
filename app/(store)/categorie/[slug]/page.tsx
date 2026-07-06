@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { redirect } from "next/navigation";
 import { ProductGrid } from "@/components/store/product-grid";
 import { BijouxBentoFilters } from "../../../../components/store/bijoux-bento-filters";
 import { productFilterSchema, slugSchema } from "@/lib/validations/catalog";
@@ -7,14 +6,21 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-const BIJOU_MATERIALS = ["acier-inox", "plaque-or"] as const;
-const BIJOU_TYPES = ["collier", "bracelet", "boucles", "autres"] as const;
+const BIJOU_TYPES = [
+  "collier",
+  "bracelet",
+  "boucles",
+  "bagues",
+  "boites",
+  "autres",
+] as const;
 const BIJOU_PRICE_RANGES = ["0-39", "40-59", "60+"] as const;
 
-const LEGACY_CATEGORY_REDIRECTS: Record<string, string> = {
-  "mode-et-accessoires": "lifestyle",
-  "sac-et-petite-maroquinerie": "lifestyle",
-};
+// Note : les anciens slugs de catégories (avant la réorganisation du menu,
+// 2026) sont redirigés vers leur nouvel équivalent au niveau de
+// next.config.mjs (redirects()), pas ici. Ça garantit un vrai HTTP 308
+// (avant tout rendu), plutôt qu'un redirect() "soft" côté client qui serait
+// invisible pour les crawlers et les liens déjà partagés/indexés.
 
 function toParamArray(value: string | string[] | undefined): string[] {
   if (!value) return [];
@@ -34,37 +40,17 @@ function getBijouType(product: { name: string; tags: string[] }) {
 
   if (source.includes("collier")) return "collier";
   if (source.includes("bracelet")) return "bracelet";
-  if (source.includes("boucles") || source.includes("oreilles"))
+  if (source.includes("boucles") || source.includes("oreille"))
     return "boucles";
-  return "autres";
-}
-
-function getBijouMaterials(product: {
-  description: string;
-  tags: string[];
-  variants: { value: string }[];
-}) {
-  const source =
-    `${product.description} ${product.tags.join(" ")} ${product.variants
-      .map((v) => v.value)
-      .join(" ")}`.toLowerCase();
-  const materials = new Set<(typeof BIJOU_MATERIALS)[number]>();
-
-  if (source.includes("acier") || source.includes("inox")) {
-    materials.add("acier-inox");
-  }
-
+  if (source.includes("bague")) return "bagues";
   if (
-    source.includes("plaqué") ||
-    source.includes("plaque") ||
-    source.includes("doré") ||
-    source.includes("doree") ||
-    source.includes("gold")
-  ) {
-    materials.add("plaque-or");
-  }
-
-  return materials;
+    source.includes("boîte") ||
+    source.includes("boite") ||
+    source.includes("écrin") ||
+    source.includes("ecrin")
+  )
+    return "boites";
+  return "autres";
 }
 
 export function generateStaticParams() {
@@ -93,18 +79,28 @@ export default async function CategoryPage({
     notFound();
   }
 
-  const redirectedSlug = LEGACY_CATEGORY_REDIRECTS[safeParams.data.slug];
-  if (redirectedSlug) {
-    redirect(`/categorie/${redirectedSlug}`);
-  }
-
   const category = await prisma.category.findUnique({
     where: { slug: safeParams.data.slug },
+    include: {
+      parent: { select: { id: true, slug: true, name: true } },
+      children: { select: { id: true } },
+    },
   });
 
   if (!category) {
     notFound();
   }
+
+  // « Voir tout » sur une catégorie parente (ex. Bijouterie, Jeux & DIY…)
+  // agrège aussi les produits de ses sous-catégories, pas seulement les
+  // siens en propre.
+  const categoryIds = [category.id, ...category.children.map((c) => c.id)];
+
+  // Une des 2 « univers » de la bijouterie (Acier inoxydable / Plaqué Or),
+  // ou la page Bijouterie elle-même (qui agrège les deux) : dans les deux
+  // cas on affiche le filtre par type de bijou.
+  const isBijouterie =
+    category.slug === "bijouterie" || category.parent?.slug === "bijouterie";
 
   const resolvedSearch = searchParams ?? {};
   const filterResult = productFilterSchema.safeParse({
@@ -126,7 +122,7 @@ export default async function CategoryPage({
   const [rawProducts, rawBrands] = await Promise.all([
     prisma.product.findMany({
       where: {
-        categoryId: category.id,
+        categoryId: { in: categoryIds },
         status: "ACTIVE",
       },
       include: {
@@ -138,7 +134,7 @@ export default async function CategoryPage({
       where: {
         products: {
           some: {
-            categoryId: category.id,
+            categoryId: { in: categoryIds },
             status: "ACTIVE",
           },
         },
@@ -185,10 +181,6 @@ export default async function CategoryPage({
       stones: [],
     };
   });
-  const selectedMaterials = toParamArray(resolvedSearch.matiere).filter(
-    (value) =>
-      BIJOU_MATERIALS.includes(value as (typeof BIJOU_MATERIALS)[number]),
-  ) as (typeof BIJOU_MATERIALS)[number][];
   const selectedType =
     typeof resolvedSearch.type === "string" &&
     BIJOU_TYPES.includes(resolvedSearch.type as (typeof BIJOU_TYPES)[number])
@@ -208,38 +200,28 @@ export default async function CategoryPage({
     name: brand.name,
   }));
 
-  const filteredProducts =
-    safeParams.data.slug === "bijoux"
-      ? products.filter((product) => {
-          const productType = getBijouType(product);
-          const productMaterials = getBijouMaterials(product);
-          const effectivePrice = product.salePrice ?? product.price;
+  const filteredProducts = isBijouterie
+    ? products.filter((product) => {
+        const productType = getBijouType(product);
+        const effectivePrice = product.salePrice ?? product.price;
 
-          const matchesType = selectedType
-            ? productType === selectedType
-            : true;
-          const matchesMaterial =
-            selectedMaterials.length === 0
-              ? true
-              : selectedMaterials.some((material) =>
-                  productMaterials.has(material),
-                );
-          const matchesBrand =
-            selectedBrands.length === 0
-              ? true
-              : selectedBrands.includes(product.brandId);
-          const matchesPrice =
-            selectedPrice === null
-              ? true
-              : selectedPrice === "0-39"
-                ? effectivePrice <= 39
-                : selectedPrice === "40-59"
-                  ? effectivePrice >= 40 && effectivePrice <= 59
-                  : effectivePrice >= 60;
+        const matchesType = selectedType ? productType === selectedType : true;
+        const matchesBrand =
+          selectedBrands.length === 0
+            ? true
+            : selectedBrands.includes(product.brandId);
+        const matchesPrice =
+          selectedPrice === null
+            ? true
+            : selectedPrice === "0-39"
+              ? effectivePrice <= 39
+              : selectedPrice === "40-59"
+                ? effectivePrice >= 40 && effectivePrice <= 59
+                : effectivePrice >= 60;
 
-          return matchesType && matchesMaterial && matchesBrand && matchesPrice;
-        })
-      : products;
+        return matchesType && matchesBrand && matchesPrice;
+      })
+    : products;
 
   return (
     <div className="space-y-8">
@@ -255,12 +237,12 @@ export default async function CategoryPage({
         </p>
       </header>
 
-      {safeParams.data.slug === "bijoux" ? (
+      {isBijouterie ? (
         <div className="grid gap-6 lg:grid-cols-4">
           {/* Sidebar Filtres */}
           <aside className="lg:col-span-1">
             <BijouxBentoFilters
-              selectedMaterials={selectedMaterials}
+              categoryHref={`/categorie/${category.slug}`}
               selectedType={selectedType}
               selectedBrands={selectedBrands}
               selectedPrice={selectedPrice}

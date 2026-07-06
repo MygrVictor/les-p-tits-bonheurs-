@@ -2,11 +2,56 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-const categories = [
+// Arborescence alignée avec lib/menu.ts (menu principal, juillet 2026).
+// Chaque entrée racine peut avoir des `children` (2e niveau, géré par
+// l'admin actuel). Voir aussi scripts/restructure-menu-2026.mjs pour la
+// migration équivalente sur une base déjà peuplée avec l'ancienne structure.
+const categoryTree = [
+  {
+    name: "Bijouterie",
+    slug: "bijouterie",
+    children: [
+      { name: "Acier inoxydable", slug: "bijouterie-acier-inoxydable" },
+      { name: "Plaqué Or", slug: "bijouterie-plaque-or" },
+    ],
+  },
   { name: "Perlerie", slug: "perlerie" },
-  { name: "DIY & Loisirs créatifs", slug: "diy-loisirs-creatifs" },
-  { name: "Lifestyle", slug: "lifestyle" },
-  { name: "Idées cadeaux", slug: "idees-cadeaux" },
+  {
+    name: "Jeux & DIY",
+    slug: "jeux-diy",
+    children: [
+      { name: "Puzzles", slug: "jeux-diy-puzzles" },
+      { name: "Jeux", slug: "jeux-diy-jeux" },
+      { name: "Peinture au numéro", slug: "jeux-diy-peinture-au-numero" },
+      { name: "Diamond Painting", slug: "jeux-diy-diamond-painting" },
+      { name: "Carnets à aquarelle", slug: "jeux-diy-carnets-aquarelle" },
+      { name: "Pastels", slug: "jeux-diy-pastels" },
+      { name: "Kits DIY", slug: "jeux-diy-kits-diy" },
+      { name: "Kits bijoux", slug: "jeux-diy-kits-bijoux" },
+    ],
+  },
+  {
+    name: "Lifestyle",
+    slug: "lifestyle",
+    children: [
+      { name: "Maroquinerie", slug: "lifestyle-maroquinerie" },
+      { name: "Accessoires cheveux", slug: "lifestyle-accessoires-cheveux" },
+      { name: "Foulards & Bandeaux", slug: "lifestyle-foulards-bandeaux" },
+      { name: "Chaussettes", slug: "lifestyle-chaussettes" },
+      { name: "Pin's", slug: "lifestyle-pins" },
+      { name: "Trousses de toilette", slug: "lifestyle-trousses-toilette" },
+    ],
+  },
+  {
+    name: "Décoration & Maison",
+    slug: "decoration-maison",
+    children: [
+      { name: "Arts de la table", slug: "decoration-maison-arts-table" },
+      { name: "Bougies", slug: "decoration-maison-bougies" },
+      { name: "Décoration murale", slug: "decoration-maison-murale" },
+    ],
+  },
+  { name: "Papeterie", slug: "papeterie" },
   { name: "Acheter par couleur", slug: "couleurs" },
   { name: "Coups de cœur Pauline", slug: "coups-de-coeur" },
 ];
@@ -35,12 +80,24 @@ const brands = [
   { name: "Carte d'Art", slug: "carte-dart" },
 ];
 
-for (const category of categories) {
-  await prisma.category.upsert({
-    where: { slug: category.slug },
-    update: { name: category.name },
-    create: category,
+let categoryCount = 0;
+
+for (const root of categoryTree) {
+  const parent = await prisma.category.upsert({
+    where: { slug: root.slug },
+    update: { name: root.name },
+    create: { name: root.name, slug: root.slug },
   });
+  categoryCount += 1;
+
+  for (const child of root.children ?? []) {
+    await prisma.category.upsert({
+      where: { slug: child.slug },
+      update: { name: child.name, parentId: parent.id },
+      create: { name: child.name, slug: child.slug, parentId: parent.id },
+    });
+    categoryCount += 1;
+  }
 }
 
 for (const brand of brands) {
@@ -52,7 +109,7 @@ for (const brand of brands) {
 }
 
 console.log("OK seeded menu categories/brands", {
-  categories: categories.length,
+  categories: categoryCount,
   brands: brands.length,
 });
 

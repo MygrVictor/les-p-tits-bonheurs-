@@ -64,7 +64,19 @@ async function uploadProductImage(file: File): Promise<string | null> {
     );
 
     return uploaded.secure_url;
-  } catch {
+  } catch (cloudinaryError) {
+    // Loggé côté serveur (visible dans les logs Vercel) pour diagnostiquer
+    // rapidement une mauvaise configuration Cloudinary, plutôt que
+    // d'échouer silencieusement et de laisser un message d'erreur générique
+    // sans indice côté utilisateur.
+    console.error(
+      "[uploadProductImage] Échec de l'upload Cloudinary :",
+      cloudinaryError,
+    );
+
+    // Sur les plateformes serverless (Vercel…), le système de fichiers est
+    // en lecture seule : cette écriture locale échouera toujours et ne sert
+    // que de filet de sécurité pour le développement local.
     try {
       const uploadDir = path.join(
         process.cwd(),
@@ -79,7 +91,11 @@ async function uploadProductImage(file: File): Promise<string | null> {
       await writeFile(filePath, buffer);
 
       return `/uploads/products/${filename}`;
-    } catch {
+    } catch (localWriteError) {
+      console.error(
+        "[uploadProductImage] Échec du fallback disque local (attendu sur Vercel/serverless) :",
+        localWriteError,
+      );
       return null;
     }
   }

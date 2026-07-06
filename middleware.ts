@@ -1,9 +1,16 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { NextResponse } from "next/server";
+import NextAuth from "next-auth";
+import { authConfig } from "@/lib/auth.config";
+
+// Instance NextAuth dédiée au middleware, construite à partir de la config
+// "Edge-safe" uniquement (sans Prisma/bcryptjs). Cela évite d'embarquer des
+// dépendances Node.js incompatibles avec l'Edge Runtime dans le bundle du
+// middleware — voir lib/auth.config.ts.
+const { auth } = NextAuth(authConfig);
 
 const authPaths = ["/api/auth"];
 
-export async function middleware(request: NextRequest) {
+export default auth((request) => {
   const { pathname } = request.nextUrl;
 
   // Connexion unique et simple : un seul point d'entrée (/compte) pour tout
@@ -21,13 +28,14 @@ export async function middleware(request: NextRequest) {
   // pas de session valide avec le rôle ADMIN. Fait ici (middleware) plutôt
   // que dans le layout car redirect() dans un layout ne bloque pas
   // fiablement les navigations directes/rechargements de page.
+  //
+  // On utilise `auth()` (et non `getToken` de next-auth/jwt) car lui seul
+  // détecte correctement le cookie de session sécurisé (__Secure-…) utilisé
+  // en production HTTPS (Vercel). `getToken` sans l'option `secureCookie`
+  // cherchait le cookie non préfixé, ne le trouvait jamais en prod, et
+  // provoquait une redirection infinie /admin ⇄ /compte.
   if (pathname.startsWith("/admin")) {
-    const token = await getToken({
-      req: request,
-      secret: process.env.NEXTAUTH_SECRET,
-    });
-
-    if (!token || token.role !== "ADMIN") {
+    if (!request.auth?.user || request.auth.user.role !== "ADMIN") {
       const loginUrl = new URL("/compte", request.url);
       return NextResponse.redirect(loginUrl);
     }
@@ -61,7 +69,7 @@ export async function middleware(request: NextRequest) {
   }
 
   return response;
-}
+});
 
 export const config = {
   matcher: [

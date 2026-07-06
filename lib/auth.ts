@@ -1,21 +1,13 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
-import type { NextAuthConfig } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { getEnv } from "@/lib/env";
 import { loginSchema } from "@/lib/validations/auth";
+import { authConfig } from "@/lib/auth.config";
 
-const authConfig = {
-  session: {
-    strategy: "jwt",
-    maxAge: 8 * 60 * 60,
-    updateAge: 60 * 30,
-  },
-  trustHost: true,
-  pages: {
-    signIn: "/compte",
-  },
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   providers: [
     Credentials({
       credentials: {
@@ -59,27 +51,7 @@ const authConfig = {
       },
     }),
   ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.role =
-          "role" in user && user.role === "ADMIN" ? "ADMIN" : "CLIENT";
-        if ("name" in user) token.name = user.name;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.role = token.role === "ADMIN" ? "ADMIN" : "CLIENT";
-        if (token.sub) session.user.id = token.sub;
-        if (token.name) session.user.name = token.name as string;
-      }
-      return session;
-    },
-  },
-} satisfies NextAuthConfig;
-
-export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
+});
 
 export function getBootstrapAdminEmail(): string {
   return getEnv().ADMIN_BOOTSTRAP_EMAIL;

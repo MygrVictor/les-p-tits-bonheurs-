@@ -269,9 +269,14 @@ export async function createProduct(formData: FormData) {
       ? colorInput
       : null;
   const imagesRaw = String(formData.get("images") ?? "").trim();
+  const imageUrlFields = [
+    String(formData.get("imageUrl1") ?? "").trim(),
+    String(formData.get("imageUrl2") ?? "").trim(),
+    String(formData.get("imageUrl3") ?? "").trim(),
+  ];
   const files = formData
     .getAll("imagesFiles")
-    .filter((entry): entry is File => entry instanceof File);
+    .filter((entry): entry is File => entry instanceof File && entry.size > 0);
   const tagsRaw = String(formData.get("tags") ?? "").trim();
 
   if (!name || !slug || !description || !resolvedCategoryId || !brandId) {
@@ -317,8 +322,7 @@ export async function createProduct(formData: FormData) {
     );
   }
 
-  const imageUrlsFromText = imagesRaw
-    .split(/\r?\n|,/)
+  const imageUrlsFromText = [...imageUrlFields, ...imagesRaw.split(/\r?\n|,/)]
     .map((entry) => entry.trim())
     .filter((entry) => /^https?:\/\//i.test(entry) || entry.startsWith("/"))
     .filter(Boolean);
@@ -326,6 +330,12 @@ export async function createProduct(formData: FormData) {
   const uploadedImages = (
     await Promise.all(files.map((file) => uploadProductImage(file)))
   ).filter((url): url is string => Boolean(url));
+
+  if (files.length > MAX_PRODUCT_IMAGES) {
+    redirectCreateProductError(
+      `Maximum ${MAX_PRODUCT_IMAGES} images en upload à la création.`,
+    );
+  }
 
   const images = [...uploadedImages, ...imageUrlsFromText].slice(
     0,
@@ -369,6 +379,7 @@ export async function createProduct(formData: FormData) {
       tags,
     },
     select: {
+      id: true,
       slug: true,
     },
   });
@@ -376,7 +387,7 @@ export async function createProduct(formData: FormData) {
   revalidatePath("/admin/produits");
   revalidatePath(`/produit/${createdProduct.slug}`);
   revalidatePath("/");
-  redirect(`/produit/${createdProduct.slug}`);
+  redirect(`/admin/produits/${createdProduct.id}/modifier`);
 }
 
 export async function updateProductStock(

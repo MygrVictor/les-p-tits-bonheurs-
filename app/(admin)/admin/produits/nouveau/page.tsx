@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { createProduct } from "@/app/(admin)/admin/actions";
 import { PRODUCT_COLORS } from "@/lib/colors";
+import { ProductImagesInput } from "@/components/admin/product-images-input";
 
 export const dynamic = "force-dynamic";
 
@@ -176,32 +177,7 @@ export default async function NewProductPage({
           />
         </div>
 
-        <div className="md:col-span-2">
-          <label className="text-sm text-neutral-600">Images (upload)</label>
-          <input
-            type="file"
-            name="imagesFiles"
-            accept="image/*"
-            multiple
-            className="mt-1 w-full rounded-xl border border-neutral-200 px-3 py-2"
-          />
-          <p className="mt-1 text-xs text-neutral-500">
-            Tu peux sélectionner jusqu&apos;à 3 images (Cloudinary si configuré,
-            sinon stockage local du serveur). Au-delà, seules les 3 premières
-            seront gardées.
-          </p>
-        </div>
-
-        <div className="md:col-span-2">
-          <label className="text-sm text-neutral-600">
-            Images (URLs, optionnel, séparées par virgule ou ligne)
-          </label>
-          <textarea
-            name="images"
-            rows={3}
-            className="mt-1 w-full rounded-xl border border-neutral-200 px-3 py-2"
-          />
-        </div>
+        <ProductImagesInput />
 
         <div className="md:col-span-2">
           <label className="text-sm text-neutral-600">

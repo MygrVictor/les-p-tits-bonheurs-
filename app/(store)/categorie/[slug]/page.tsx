@@ -1,26 +1,53 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { ProductGrid } from "@/components/store/product-grid";
-import { BijouxBentoFilters } from "../../../../components/store/bijoux-bento-filters";
+import {
+  CategoryFilters,
+  type FilterGroup,
+} from "@/components/store/category-filters";
 import { productFilterSchema, slugSchema } from "@/lib/validations/catalog";
 import { prisma } from "@/lib/prisma";
+import {
+  getCategoryFilterConfig,
+  detectGroupValue,
+  PRICE_RANGE_IDS,
+  type PriceRange,
+} from "@/lib/category-filters";
+import { PRODUCT_COLORS } from "@/lib/colors";
 
 export const dynamic = "force-dynamic";
 
-const BIJOU_TYPES = [
-  "collier",
-  "bracelet",
-  "boucles",
-  "bagues",
-  "boites",
-  "autres",
-] as const;
-const BIJOU_PRICE_RANGES = ["0-39", "40-59", "60+"] as const;
+export async function generateMetadata({
+  params,
+}: {
+  params: { slug: string };
+}): Promise<Metadata> {
+  const category = await prisma.category.findUnique({
+    where: { slug: params.slug },
+    select: { name: true },
+  });
+
+  if (!category) return { title: "Catégorie introuvable" };
+
+  return {
+    title: `${category.name} — Les P'tits Bonheurs`,
+    description: `Découvrez notre sélection ${category.name.toLowerCase()} : bijoux, mode et accessoires artisanaux. Livraison rapide en France et en Europe.`,
+    openGraph: {
+      title: `${category.name} — Les P'tits Bonheurs`,
+      type: "website",
+    },
+  };
+}
 
 // Note : les anciens slugs de catégories (avant la réorganisation du menu,
 // 2026) sont redirigés vers leur nouvel équivalent au niveau de
 // next.config.mjs (redirects()), pas ici. Ça garantit un vrai HTTP 308
 // (avant tout rendu), plutôt qu'un redirect() "soft" côté client qui serait
 // invisible pour les crawlers et les liens déjà partagés/indexés.
+
+// Les filtres "basiques" (Type/Format + Marque + Prix) sont configurés par
+// catégorie dans lib/category-filters.ts — voir getCategoryFilterConfig.
+// Marque et Prix s'appliquent eux automatiquement à toutes les catégories.
 
 function toParamArray(value: string | string[] | undefined): string[] {
   if (!value) return [];
@@ -31,26 +58,6 @@ function toParamArray(value: string | string[] | undefined): string[] {
     .split(",")
     .map((v) => v.trim())
     .filter(Boolean);
-}
-
-function getBijouType(product: { name: string; tags: string[] }) {
-  const fromName = product.name.toLowerCase();
-  const fromTags = product.tags.join(" ").toLowerCase();
-  const source = `${fromName} ${fromTags}`;
-
-  if (source.includes("collier")) return "collier";
-  if (source.includes("bracelet")) return "bracelet";
-  if (source.includes("boucles") || source.includes("oreille"))
-    return "boucles";
-  if (source.includes("bague")) return "bagues";
-  if (
-    source.includes("boîte") ||
-    source.includes("boite") ||
-    source.includes("écrin") ||
-    source.includes("ecrin")
-  )
-    return "boites";
-  return "autres";
 }
 
 export function generateStaticParams() {
@@ -96,11 +103,17 @@ export default async function CategoryPage({
   // siens en propre.
   const categoryIds = [category.id, ...category.children.map((c) => c.id)];
 
-  // Une des 2 « univers » de la bijouterie (Acier inoxydable / Plaqué Or),
-  // ou la page Bijouterie elle-même (qui agrège les deux) : dans les deux
-  // cas on affiche le filtre par type de bijou.
-  const isBijouterie =
-    category.slug === "bijouterie" || category.parent?.slug === "bijouterie";
+  // « Acheter par couleur » n'est pas une vraie catégorie de produits (un
+  // produit ne peut avoir qu'une seule categoryId, qui reste toujours sa
+  // vraie famille) : c'est une vue transverse, comme « Nouveautés », basée
+  // sur l'attribut optionnel `color` du produit (voir lib/colors.ts).
+  const isColorHub = category.slug === "couleurs";
+
+  // Filtre(s) "Type" (ou "Nombre de pièces") propres à cette famille de
+  // produits, s'il y en a — voir lib/category-filters.ts. `null` quand la
+  // catégorie n'a pas de vocabulaire homogène (elle garde quand même les
+  // filtres Marque + Prix, communs à toutes les catégories).
+  const filterConfig = getCategoryFilterConfig(category);
 
   const resolvedSearch = searchParams ?? {};
   const filterResult = productFilterSchema.safeParse({
@@ -119,24 +132,55 @@ export default async function CategoryPage({
       typeof resolvedSearch.sort === "string" ? resolvedSearch.sort : "newest",
   });
 
+  // --- Filtres poussés côté DB pour réduire les données chargées ---
+  const selectedBrandsEarly = toParamArray(resolvedSearch.brand);
+  const selectedPriceEarly: PriceRange | null =
+    typeof resolvedSearch.prix === "string" &&
+    PRICE_RANGE_IDS.includes(resolvedSearch.prix as PriceRange)
+      ? (resolvedSearch.prix as PriceRange)
+      : null;
+  const rawSelectedColorEarly =
+    typeof resolvedSearch.couleur === "string"
+      ? resolvedSearch.couleur
+      : undefined;
+
+  const priceWhere =
+    selectedPriceEarly === "0-39"
+      ? { price: { lte: 3900 } }
+      : selectedPriceEarly === "40-59"
+        ? { price: { gte: 4000, lte: 5900 } }
+        : selectedPriceEarly === "60+"
+          ? { price: { gte: 6000 } }
+          : {};
+
+  const baseWhere = isColorHub
+    ? { status: "ACTIVE" as const, color: { not: null } }
+    : { categoryId: { in: categoryIds }, status: "ACTIVE" as const };
+
+  const productWhere = {
+    ...baseWhere,
+    ...(selectedBrandsEarly.length > 0
+      ? { brandId: { in: selectedBrandsEarly } }
+      : {}),
+    ...(isColorHub && rawSelectedColorEarly
+      ? { color: rawSelectedColorEarly }
+      : {}),
+    ...priceWhere,
+  };
+
   const [rawProducts, rawBrands] = await Promise.all([
     prisma.product.findMany({
-      where: {
-        categoryId: { in: categoryIds },
-        status: "ACTIVE",
-      },
+      where: productWhere,
       include: {
         variants: true,
       },
       orderBy: { createdAt: "desc" },
+      take: 300, // sécurité : jamais plus de 300 produits chargés en mémoire
     }),
     prisma.brand.findMany({
       where: {
         products: {
-          some: {
-            categoryId: { in: categoryIds },
-            status: "ACTIVE",
-          },
+          some: productWhere,
         },
       },
       orderBy: { name: "asc" },
@@ -156,6 +200,7 @@ export default async function CategoryPage({
       salePrice: product.salePrice ? product.salePrice / 100 : null,
       brandId: product.brandId,
       categoryId: product.categoryId,
+      color: product.color,
       images:
         images.length > 0
           ? images
@@ -181,47 +226,108 @@ export default async function CategoryPage({
       stones: [],
     };
   });
-  const selectedType =
-    typeof resolvedSearch.type === "string" &&
-    BIJOU_TYPES.includes(resolvedSearch.type as (typeof BIJOU_TYPES)[number])
-      ? (resolvedSearch.type as (typeof BIJOU_TYPES)[number])
-      : null;
-  const selectedBrands = toParamArray(resolvedSearch.brand);
-  const selectedPrice =
-    typeof resolvedSearch.prix === "string" &&
-    BIJOU_PRICE_RANGES.includes(
-      resolvedSearch.prix as (typeof BIJOU_PRICE_RANGES)[number],
-    )
-      ? (resolvedSearch.prix as (typeof BIJOU_PRICE_RANGES)[number])
+
+  // Valeur sélectionnée pour chaque groupe de filtre "Type" (ex. ?type=,
+  // ?pieces=), validée contre les options connues de la config de cette
+  // catégorie.
+  const selectedGroupValues: Record<string, string | null> = {};
+  if (filterConfig) {
+    for (const group of filterConfig.groups) {
+      const raw = resolvedSearch[group.paramName];
+      const value = typeof raw === "string" ? raw : undefined;
+      selectedGroupValues[group.paramName] =
+        value && group.options.some((option) => option.id === value)
+          ? value
+          : null;
+    }
+  }
+
+  // Filtre « Couleur » (uniquement sur /categorie/couleurs) : on ne
+  // propose que les couleurs réellement présentes parmi les produits
+  // trouvés, pour éviter des pastilles qui mèneraient vers une liste vide.
+  const availableColorIds = isColorHub
+    ? Array.from(
+        new Set(
+          products.map((p) => p.color).filter((c): c is string => Boolean(c)),
+        ),
+      )
+    : [];
+  const colorOptions = PRODUCT_COLORS.filter((c) =>
+    availableColorIds.includes(c.id),
+  );
+  const selectedColor =
+    isColorHub &&
+    rawSelectedColorEarly &&
+    availableColorIds.includes(rawSelectedColorEarly)
+      ? rawSelectedColorEarly
       : null;
 
-  const bijouxBrandOptions = rawBrands.map((brand) => ({
+  const selectedBrands = selectedBrandsEarly;
+  const selectedPrice = selectedPriceEarly;
+
+  const brandOptions = rawBrands.map((brand) => ({
     id: brand.id,
     name: brand.name,
   }));
 
-  const filteredProducts = isBijouterie
-    ? products.filter((product) => {
-        const productType = getBijouType(product);
-        const effectivePrice = product.salePrice ?? product.price;
+  const filteredProducts = products.filter((product) => {
+    const effectivePrice = product.salePrice ?? product.price;
 
-        const matchesType = selectedType ? productType === selectedType : true;
-        const matchesBrand =
-          selectedBrands.length === 0
-            ? true
-            : selectedBrands.includes(product.brandId);
-        const matchesPrice =
-          selectedPrice === null
-            ? true
-            : selectedPrice === "0-39"
-              ? effectivePrice <= 39
-              : selectedPrice === "40-59"
-                ? effectivePrice >= 40 && effectivePrice <= 59
-                : effectivePrice >= 60;
+    const matchesGroups = filterConfig
+      ? filterConfig.groups.every((group) => {
+          const selected = selectedGroupValues[group.paramName];
+          if (!selected) return true;
+          return detectGroupValue(product, group) === selected;
+        })
+      : true;
 
-        return matchesType && matchesBrand && matchesPrice;
-      })
-    : products;
+    const matchesColor = selectedColor ? product.color === selectedColor : true;
+
+    const matchesBrand =
+      selectedBrands.length === 0
+        ? true
+        : selectedBrands.includes(product.brandId);
+    const matchesPrice =
+      selectedPrice === null
+        ? true
+        : selectedPrice === "0-39"
+          ? effectivePrice <= 39
+          : selectedPrice === "40-59"
+            ? effectivePrice >= 40 && effectivePrice <= 59
+            : effectivePrice >= 60;
+
+    return matchesGroups && matchesColor && matchesBrand && matchesPrice;
+  });
+
+  // Groupes "Type" au format attendu par <CategoryFilters> (options
+  // simplifiées + valeur sélectionnée intégrée dans chaque groupe), plus
+  // le groupe "Couleur" (pastilles) quand on est sur la vue transverse.
+  const filterGroups: FilterGroup[] = (filterConfig?.groups ?? []).map(
+    (group) => ({
+      paramName: group.paramName,
+      title: group.title,
+      selected: selectedGroupValues[group.paramName] ?? null,
+      options: group.options.map((option) => ({
+        id: option.id,
+        label: option.label,
+        helper: option.helper,
+      })),
+    }),
+  );
+
+  if (isColorHub && colorOptions.length > 0) {
+    filterGroups.push({
+      paramName: "couleur",
+      title: "Couleur",
+      selected: selectedColor,
+      variant: "swatch",
+      options: colorOptions.map((color) => ({
+        id: color.id,
+        label: color.label,
+        hex: color.hex,
+      })),
+    });
+  }
 
   return (
     <div className="space-y-8">
@@ -237,27 +343,32 @@ export default async function CategoryPage({
         </p>
       </header>
 
-      {isBijouterie ? (
-        <div className="grid gap-6 lg:grid-cols-4">
-          {/* Sidebar Filtres */}
-          <aside className="lg:col-span-1">
-            <BijouxBentoFilters
-              categoryHref={`/categorie/${category.slug}`}
-              selectedType={selectedType}
-              selectedBrands={selectedBrands}
-              selectedPrice={selectedPrice}
-              brandOptions={bijouxBrandOptions}
-            />
-          </aside>
+      <div className="grid gap-6 lg:grid-cols-4">
+        {/* Sidebar Filtres — Type (si applicable) + Marques + Prix */}
+        <aside className="lg:col-span-1">
+          <CategoryFilters
+            categoryHref={`/categorie/${category.slug}`}
+            filterGroups={filterGroups}
+            selectedBrands={selectedBrands}
+            selectedPrice={selectedPrice}
+            brandOptions={brandOptions}
+          />
+        </aside>
 
-          {/* Produits */}
-          <section className="lg:col-span-3">
+        {/* Produits */}
+        <section className="lg:col-span-3">
+          {filteredProducts.length === 0 ? (
+            <div className="rounded-3xl bg-white p-10 text-center shadow-soft">
+              <p className="text-sm text-neutral-500">
+                Aucun produit ne correspond à ces filtres pour le moment —
+                revenez bientôt, la sélection s&apos;agrandit régulièrement !
+              </p>
+            </div>
+          ) : (
             <ProductGrid products={filteredProducts} />
-          </section>
-        </div>
-      ) : (
-        <ProductGrid products={filteredProducts} />
-      )}
+          )}
+        </section>
+      </div>
     </div>
   );
 }

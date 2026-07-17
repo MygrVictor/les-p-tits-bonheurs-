@@ -7,6 +7,7 @@ const links = [
   { href: "/admin/marques", label: "Marques" },
   { href: "/admin/commandes", label: "Commandes" },
   { href: "/admin/clients", label: "Clients" },
+  { href: "/admin/avis", label: "Avis clients" },
 ];
 
 export function AdminSidebar() {

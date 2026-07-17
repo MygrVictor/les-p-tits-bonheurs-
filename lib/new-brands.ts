@@ -1,46 +1,54 @@
 export type NewBrand = {
   /** Identifiant unique et stable (utilisé comme clé React). */
   id: string;
-  /** Nom affiché sur l'image. */
+  /** Nom affiché sous les photos. */
   name: string;
   /** Petite accroche optionnelle sous le nom (ex. type de produit). */
   tagline?: string;
-  /** Chemin de l'image (dans /public) ou URL complète. */
-  image: string;
+  /** Les 3 photos de la marque (dans /public) ou URLs complètes. */
+  images: string[];
   /** Lien au clic — en général la catégorie ou le filtre marque associé. */
   href: string;
 };
 
 /**
  * Marques mises en avant dans le bandeau « Nouveautés » de la page
- * d'accueil (grand carrousel, 3 images côte à côte par slide).
+ * d'accueil (grand carrousel). Chaque marque = 1 slide avec SES 3 photos
+ * côte à côte. Quand on fait défiler, la marque suivante arrive avec ses
+ * propres 3 photos.
  *
  * ⚠️ À MODIFIER RÉGULIÈREMENT : c'est ici qu'on ajoute/retire/remplace les
  * nouvelles marques du moment. Pas besoin de toucher au reste du code.
  *
  * Pour changer une marque :
- *   1. Dépose la nouvelle photo dans /public (ex. /ma-marque.jpg)
- *   2. Modifie ou ajoute une entrée ci-dessous
+ *   1. Dépose ses 3 nouvelles photos dans /public (ex. /ma-marque.jpg,
+ *      /ma-marque2.jpg, /ma-marque3.jpg)
+ *   2. Modifie ou ajoute une entrée ci-dessous avec ces 3 chemins dans
+ *      "images"
  *   3. Le lien "href" doit pointer vers la catégorie où trouver ses
  *      produits (voir lib/menu.ts pour la liste des URLs de catégories)
  *
- * S'il y a 1 ou 2 marques seulement, le carrousel affiche simplement ce
- * qu'il y a (pas besoin d'en avoir toujours 3). Au-delà de 3, elles sont
- * automatiquement réparties sur plusieurs slides.
+ * Le tableau "images" doit idéalement contenir exactement 3 photos (c'est
+ * ce qui s'affiche côte à côte sur une slide). S'il y en a plus de 3,
+ * seules les 3 premières sont utilisées.
  */
 export const newBrands: NewBrand[] = [
   {
     id: "charly-therapy",
     name: "Charly Therapy",
     tagline: "Lunettes de soleil",
-    image: "/charly-therapy.jpg",
+    images: [
+      "/charly-therapy.jpg",
+      "/charly-therapy2.jpg",
+      "/charly-thérapy3.jpg",
+    ],
     href: "/categorie/lifestyle",
   },
   {
     id: "zag-bijoux",
     name: "Zag Bijoux",
     tagline: "Bijoux en acier doré",
-    image: "/zag-bijoux.jpg",
+    images: ["/zag-bijoux.jpg", "/zag-bijoux2.jpg", "/zag-bijoux3.jpg"],
     href: "/categorie/bijouterie",
   },
 ];

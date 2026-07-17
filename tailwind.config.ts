@@ -28,6 +28,7 @@ const config: Config = {
       },
       fontFamily: {
         serif: ["var(--font-display)", "Georgia", "serif"],
+        brand: ["var(--font-brand)", "Georgia", "serif"],
         sans: ["var(--font-body)", "system-ui", "sans-serif"],
       },
       keyframes: {

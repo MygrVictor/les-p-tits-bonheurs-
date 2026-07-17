@@ -27,14 +27,28 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum OrderEventType {
+  ORDER_CONFIRMED
+  PAYMENT_FAILED
+  REFUNDED
+  STATUS_UPDATED
+  STOCK_RESTORED
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
   password  String
   name      String?
   address   String?
+  emailVerifiedAt DateTime?
+  deletedAt DateTime?
   role      Role     @default(CLIENT)
   orders    Order[]
+  verificationTokens EmailVerificationToken[]
+  passwordResetTokens PasswordResetToken[]
+  wishlistItems WishlistItem[]
+  reviews       Review[]
   createdAt DateTime @default(now())
 
   @@index([email])
@@ -74,6 +88,11 @@ model Product {
   stock       Int             @default(0)
   status      ProductStatus   @default(DRAFT)
   isNew       Boolean         @default(false)
+  // Couleur dominante (optionnelle) — id issu de lib/colors.ts (ex.
+  // "rose", "dore"…). Sert uniquement à alimenter la catégorie transverse
+  // "Acheter par couleur" (/categorie/couleurs), pas de FK : reste un
+  // simple texte libre pour éviter une table de référence supplémentaire.
+  color       String?
   brandId     String
   brand       Brand           @relation(fields: [brandId], references: [id])
   categoryId  String
@@ -81,6 +100,8 @@ model Product {
   variants    ProductVariant[]
   stone       Stone?
   orderItems  OrderItem[]
+  wishlistItems WishlistItem[]
+  reviews     Review[]
   tags        Json            @default("[]")
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
@@ -89,6 +110,7 @@ model Product {
   @@index([brandId])
   @@index([categoryId])
   @@index([status])
+  @@index([color])
 }
 
 model ProductVariant {
@@ -119,13 +141,36 @@ model Order {
   userId          String
   user            User        @relation(fields: [userId], references: [id])
   items           OrderItem[]
+  events          OrderEvent[]
   total           Int
   status          OrderStatus @default(PENDING)
   stripePaymentId String?     @unique
+  stripeIntentId  String?     @unique
+  // Suivi colis, rempli manuellement par l'admin au moment de l'expédition
+  // (voir lib/carriers.ts pour la liste des transporteurs + génération du
+  // lien de suivi). Texte libre, pas de FK : pas besoin d'une table dédiée
+  // pour un simple identifiant transporteur.
+  carrier         String?
+  trackingNumber  String?
   createdAt       DateTime    @default(now())
 
   @@index([userId])
   @@index([status])
+}
+
+model OrderEvent {
+  id            String         @id @default(cuid())
+  orderId       String
+  order         Order          @relation(fields: [orderId], references: [id])
+  type          OrderEventType
+  message       String?
+  data          Json           @default("{}")
+  stripeEventId String?        @unique
+  createdAt     DateTime       @default(now())
+
+  @@index([orderId])
+  @@index([type])
+  @@index([createdAt])
 }
 
 model OrderItem {
@@ -139,4 +184,58 @@ model OrderItem {
   price     Int
 
   @@index([orderId])
+}
+
+model EmailVerificationToken {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+  @@index([userId])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  rating    Int
+  comment   String
+  approved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@index([userId])
+  @@index([approved])
 }

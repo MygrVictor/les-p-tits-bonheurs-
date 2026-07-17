@@ -8,6 +8,14 @@ import path from "node:path";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getCloudinaryClient } from "@/lib/cloudinary";
+import { PRODUCT_COLORS } from "@/lib/colors";
+import { CARRIERS } from "@/lib/carriers";
+import { sendShippingNotification } from "@/lib/order-notifications";
+
+// Limite volontaire (pas une contrainte Cloudinary/DB) : 3 photos par
+// produit suffisent largement pour une boutique artisanale, et évitent des
+// fiches produit trop lourdes à charger côté client.
+const MAX_PRODUCT_IMAGES = 3;
 
 function slugify(input: string): string {
   return input
@@ -255,6 +263,11 @@ export async function createProduct(formData: FormData) {
   const brandId = String(formData.get("brandId") ?? "").trim();
   const status = String(formData.get("status") ?? "DRAFT").trim();
   const isNew = String(formData.get("isNew") ?? "false") === "true";
+  const colorInput = String(formData.get("color") ?? "").trim();
+  const color =
+    colorInput && PRODUCT_COLORS.some((c) => c.id === colorInput)
+      ? colorInput
+      : null;
   const imagesRaw = String(formData.get("images") ?? "").trim();
   const files = formData
     .getAll("imagesFiles")
@@ -314,7 +327,10 @@ export async function createProduct(formData: FormData) {
     await Promise.all(files.map((file) => uploadProductImage(file)))
   ).filter((url): url is string => Boolean(url));
 
-  const images = [...uploadedImages, ...imageUrlsFromText];
+  const images = [...uploadedImages, ...imageUrlsFromText].slice(
+    0,
+    MAX_PRODUCT_IMAGES,
+  );
 
   if (files.length > 0 && uploadedImages.length === 0) {
     redirectCreateProductError(
@@ -348,6 +364,7 @@ export async function createProduct(formData: FormData) {
       brandId,
       status: status === "ACTIVE" || status === "ARCHIVED" ? status : "DRAFT",
       isNew,
+      color,
       images: uniqueImages,
       tags,
     },
@@ -395,9 +412,39 @@ export async function updateProduct(productId: string, formData: FormData) {
   const brandId = String(formData.get("brandId") ?? "").trim();
   const status = String(formData.get("status") ?? "DRAFT").trim();
   const isNew = String(formData.get("isNew") ?? "false") === "true";
+  const colorInput = String(formData.get("color") ?? "").trim();
+  const color =
+    colorInput && PRODUCT_COLORS.some((c) => c.id === colorInput)
+      ? colorInput
+      : null;
+
+  // Images existantes conservées (cases à cocher décochées = supprimées),
+  // plus d'éventuelles nouvelles images (upload ou URL). Le tout plafonné
+  // à MAX_PRODUCT_IMAGES pour rester cohérent avec la création.
+  const keptImages = formData
+    .getAll("keepImage")
+    .map((entry) => String(entry).trim())
+    .filter(Boolean);
+  const newImagesRaw = String(formData.get("newImages") ?? "").trim();
+  const newImageUrls = newImagesRaw
+    .split(/\r?\n|,/)
+    .map((entry) => entry.trim())
+    .filter((entry) => /^https?:\/\//i.test(entry) || entry.startsWith("/"))
+    .filter(Boolean);
+  const newFiles = formData
+    .getAll("newImagesFiles")
+    .filter((entry): entry is File => entry instanceof File && entry.size > 0);
 
   if (!productId || !name || !description || !resolvedCategoryId || !brandId)
     return;
+
+  const uploadedNewImages = (
+    await Promise.all(newFiles.map((file) => uploadProductImage(file)))
+  ).filter((url): url is string => Boolean(url));
+
+  const images = Array.from(
+    new Set([...keptImages, ...uploadedNewImages, ...newImageUrls]),
+  ).slice(0, MAX_PRODUCT_IMAGES);
 
   await prisma.product.update({
     where: { id: productId },
@@ -410,6 +457,11 @@ export async function updateProduct(productId: string, formData: FormData) {
       brandId,
       status: status === "ACTIVE" || status === "ARCHIVED" ? status : "DRAFT",
       isNew,
+      color,
+      // N'écrase les images que si la liste finale n'est pas vide — évite
+      // de vider par accident les photos d'un produit si le navigateur
+      // n'a soumis aucun champ image pour une raison quelconque.
+      ...(images.length > 0 ? { images } : {}),
     },
   });
 
@@ -418,13 +470,76 @@ export async function updateProduct(productId: string, formData: FormData) {
   redirect("/admin/produits");
 }
 
+// Suppression définitive impossible pour un produit déjà présent dans une
+// commande (contrainte ON DELETE RESTRICT en base, voir migration.sql) :
+// ça casserait l'historique des commandes passées. Dans ce cas, on redirige
+// avec un message qui invite à archiver le produit plutôt (statut
+// « Archivé » — il disparaît de la boutique sans toucher aux commandes).
+export async function deleteProduct(productId: string) {
+  await ensureAdmin();
+
+  if (!productId) return;
+
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: {
+      id: true,
+      _count: { select: { orderItems: true } },
+    },
+  });
+
+  if (!product) return;
+
+  if (product._count.orderItems > 0) {
+    redirect(
+      `/admin/produits/${productId}/modifier?error=${encodeURIComponent(
+        "Impossible de supprimer ce produit : il fait partie de commandes déjà passées. Archivez-le plutôt (statut « Archivé ») pour le retirer de la boutique sans casser l'historique des commandes.",
+      )}`,
+    );
+  }
+
+  // Les variantes et la fiche pierre associées sont aussi en ON DELETE
+  // RESTRICT : il faut les supprimer explicitement avant le produit
+  // lui-même, dans une transaction pour rester atomique.
+  await prisma.$transaction([
+    prisma.productVariant.deleteMany({ where: { productId } }),
+    prisma.stone.deleteMany({ where: { productId } }),
+    prisma.product.delete({ where: { id: productId } }),
+  ]);
+
+  revalidatePath("/admin/produits");
+  revalidatePath("/");
+  redirect("/admin/produits");
+}
+
 export async function updateOrderStatus(orderId: string, formData: FormData) {
   await ensureAdmin();
 
   const status = String(formData.get("status") ?? "PENDING").trim();
   const allowed = ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"];
+  const carrierInput = String(formData.get("carrier") ?? "").trim();
+  const trackingNumberInput = String(
+    formData.get("trackingNumber") ?? "",
+  ).trim();
 
   if (!orderId || !allowed.includes(status)) return;
+
+  const existingOrder = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      carrier: true,
+      trackingNumber: true,
+      user: { select: { email: true } },
+    },
+  });
+
+  if (!existingOrder) return;
+
+  const carrier =
+    carrierInput && CARRIERS.some((c) => c.id === carrierInput)
+      ? carrierInput
+      : null;
+  const trackingNumber = trackingNumberInput || null;
 
   await prisma.order.update({
     where: { id: orderId },
@@ -435,9 +550,61 @@ export async function updateOrderStatus(orderId: string, formData: FormData) {
         | "SHIPPED"
         | "DELIVERED"
         | "CANCELLED",
+      carrier,
+      trackingNumber,
     },
   });
 
+  // Email de suivi envoyé uniquement quand un numéro est renseigné ET qu'il
+  // est nouveau ou a changé depuis la dernière fois — évite de spammer le
+  // client si l'admin ne fait que changer le statut sans toucher au suivi
+  // (ou soumet le formulaire sans rien modifier).
+  const trackingChanged =
+    trackingNumber !== null &&
+    (trackingNumber !== existingOrder.trackingNumber ||
+      carrier !== existingOrder.carrier);
+
+  let emailStatus: "sent" | "failed" | "unchanged" = "unchanged";
+
+  if (trackingChanged && existingOrder.user.email) {
+    const sent = await sendShippingNotification({
+      email: existingOrder.user.email,
+      orderId,
+      carrier,
+      trackingNumber,
+    });
+    emailStatus = sent ? "sent" : "failed";
+  }
+
   revalidatePath("/admin/commandes");
   revalidatePath("/admin");
+  revalidatePath("/compte");
+
+  // Redirection avec un statut d'envoi lisible par l'admin — sans ça, rien
+  // n'indique visuellement si l'email de suivi est réellement parti ou a
+  // été refusé (ex. limite du mode test Resend, clé invalide…).
+  redirect(
+    `/admin/commandes?emailStatus=${emailStatus}&order=${orderId.slice(-6).toUpperCase()}`,
+  );
+}
+
+export async function approveReview(reviewId: string) {
+  await ensureAdmin();
+  if (!reviewId) return;
+
+  await prisma.review.update({
+    where: { id: reviewId },
+    data: { approved: true },
+  });
+
+  revalidatePath("/admin/avis");
+}
+
+export async function deleteReview(reviewId: string) {
+  await ensureAdmin();
+  if (!reviewId) return;
+
+  await prisma.review.delete({ where: { id: reviewId } });
+
+  revalidatePath("/admin/avis");
 }

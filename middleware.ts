@@ -1,12 +1,24 @@
 import { NextResponse } from "next/server";
 import NextAuth from "next-auth";
 import { authConfig } from "@/lib/auth.config";
+import { rateLimit } from "@/lib/rate-limit";
 
 // Instance NextAuth dédiée au middleware, construite à partir de la config
 // "Edge-safe" uniquement (sans Prisma/bcryptjs). Cela évite d'embarquer des
 // dépendances Node.js incompatibles avec l'Edge Runtime dans le bundle du
 // middleware — voir lib/auth.config.ts.
 const { auth } = NextAuth(authConfig);
+
+// Routes soumises au rate limiting (hits par IP, fenêtre glissante 60 s)
+const RATE_LIMIT_RULES: { prefix: string; limit: number }[] = [
+  { prefix: "/api/auth", limit: 15 },
+  { prefix: "/api/account/forgot-password", limit: 5 },
+  { prefix: "/api/account/reset-password", limit: 5 },
+  { prefix: "/api/account/register", limit: 10 },
+  { prefix: "/api/account/resend-verification", limit: 5 },
+  { prefix: "/api/checkout", limit: 30 },
+  { prefix: "/api/contact", limit: 10 },
+];
 
 const authPaths = ["/api/auth"];
 
@@ -49,23 +61,34 @@ export default auth((request) => {
     "Content-Security-Policy",
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com",
-      "connect-src 'self' https://api.stripe.com https://*.stripe.com",
+      "img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com https://www.google-analytics.com",
+      "connect-src 'self' https://api.stripe.com https://*.stripe.com https://www.google-analytics.com https://analytics.google.com",
       "frame-src https://js.stripe.com https://hooks.stripe.com",
       "form-action 'self' https://hooks.stripe.com",
     ].join("; "),
   );
 
-  if (authPaths.some((path) => pathname.startsWith(path))) {
-    const attempts = Number(
-      request.headers.get("x-ratelimit-remaining") ?? "10",
-    );
-    if (attempts <= 0) {
-      return new NextResponse("Too Many Requests", { status: 429 });
+  // Rate limiting réel : fenêtre glissante 60 s, par IP
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    request.headers.get("x-real-ip") ??
+    "unknown";
+
+  const rule = RATE_LIMIT_RULES.find((r) => pathname.startsWith(r.prefix));
+  if (rule) {
+    const result = rateLimit(`${rule.prefix}:${ip}`, rule.limit, 60_000);
+    if (!result.ok) {
+      return new NextResponse("Too Many Requests", {
+        status: 429,
+        headers: {
+          "Retry-After": String(Math.ceil(result.retryAfterMs / 1000)),
+        },
+      });
     }
+    response.headers.set("X-RateLimit-Remaining", String(result.remaining));
   }
 
   return response;

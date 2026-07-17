@@ -4,6 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { getStripeClient } from "@/lib/stripe";
 import { auth } from "@/lib/auth";
 import { encodeCartMetadata, type CheckoutCartItem } from "@/lib/checkout";
+import {
+  ALLOWED_SHIPPING_COUNTRIES,
+  getShippingOptionsForCountry,
+  isShippingCountry,
+} from "@/lib/shipping";
 
 export const runtime = "nodejs";
 
@@ -19,6 +24,7 @@ const bodySchema = z.object({
     .min(1)
     .max(30),
   email: z.string().email().optional(),
+  shippingCountry: z.string().length(2),
 });
 
 function toStringArray(value: unknown): string[] {
@@ -44,6 +50,14 @@ export async function POST(request: Request) {
 
   const session = await auth();
   const email = session?.user?.email ?? parsed.data.email;
+  const shippingCountry = parsed.data.shippingCountry.toUpperCase();
+
+  if (!isShippingCountry(shippingCountry)) {
+    return NextResponse.json(
+      { error: "Pays de livraison non pris en charge." },
+      { status: 400 },
+    );
+  }
 
   const lineItems: {
     price_data: {
@@ -126,16 +140,21 @@ export async function POST(request: Request) {
 
   const metadata = encodeCartMetadata(metaItems);
   if (email) metadata.email = email;
+  metadata.shippingCountry = shippingCountry;
 
   try {
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: lineItems,
       ...(email ? { customer_email: email } : {}),
+      locale: "fr",
+      allow_promotion_codes: true,
+      automatic_tax: { enabled: true },
       billing_address_collection: "auto",
       shipping_address_collection: {
-        allowed_countries: ["FR", "BE", "CH", "LU", "CA", "DE", "ES", "IT"],
+        allowed_countries: ALLOWED_SHIPPING_COUNTRIES,
       },
+      shipping_options: getShippingOptionsForCountry(shippingCountry),
       metadata,
       success_url: `${origin}/commande/confirmation?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/checkout`,

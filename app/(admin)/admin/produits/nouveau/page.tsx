@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { createProduct } from "@/app/(admin)/admin/actions";
+import { PRODUCT_COLORS } from "@/lib/colors";
 
 export const dynamic = "force-dynamic";
 
@@ -42,14 +43,10 @@ export default async function NewProductPage({
             required
             className="mt-1 w-full rounded-xl border border-neutral-200 px-3 py-2"
           />
-        </div>
-
-        <div>
-          <label className="text-sm text-neutral-600">Slug (optionnel)</label>
-          <input
-            name="slug"
-            className="mt-1 w-full rounded-xl border border-neutral-200 px-3 py-2"
-          />
+          <p className="mt-1 text-xs text-neutral-500">
+            L&apos;URL de la fiche produit (slug) est générée automatiquement à
+            partir du nom.
+          </p>
         </div>
 
         <div>
@@ -147,6 +144,28 @@ export default async function NewProductPage({
           </select>
         </div>
 
+        <div>
+          <label className="text-sm text-neutral-600">
+            Couleur (optionnel)
+          </label>
+          <select
+            name="color"
+            defaultValue=""
+            className="mt-1 w-full rounded-xl border border-neutral-200 px-3 py-2"
+          >
+            <option value="">Aucune</option>
+            {PRODUCT_COLORS.map((color) => (
+              <option key={color.id} value={color.id}>
+                {color.label}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-neutral-500">
+            Utilisée par la catégorie « Acheter par couleur ». Choisis la
+            couleur dominante du produit.
+          </p>
+        </div>
+
         <div className="md:col-span-2">
           <label className="text-sm text-neutral-600">Description</label>
           <textarea
@@ -167,8 +186,9 @@ export default async function NewProductPage({
             className="mt-1 w-full rounded-xl border border-neutral-200 px-3 py-2"
           />
           <p className="mt-1 text-xs text-neutral-500">
-            Tu peux sélectionner plusieurs images (Cloudinary si configuré,
-            sinon stockage local du serveur).
+            Tu peux sélectionner jusqu&apos;à 3 images (Cloudinary si configuré,
+            sinon stockage local du serveur). Au-delà, seules les 3 premières
+            seront gardées.
           </p>
         </div>
 

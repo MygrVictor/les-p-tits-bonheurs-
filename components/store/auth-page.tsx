@@ -25,14 +25,27 @@ export function AuthPage({ defaultTab = "login" }: { defaultTab?: Tab }) {
   const [showPwd, setShowPwd] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
   const [loading, setLoading] = useState(false);
 
   const switchTab = (t: Tab) => {
     setTab(t);
     setError("");
+    setInfo("");
     setPassword("");
     setConfirm("");
   };
+
+  useEffect(() => {
+    const verified = searchParams.get("verified");
+    const verificationError = searchParams.get("error");
+
+    if (verified === "1") {
+      setInfo("Email confirmé. Vous pouvez vous connecter.");
+    } else if (verificationError === "verification") {
+      setError("Lien de confirmation invalide ou expiré.");
+    }
+  }, [searchParams]);
 
   const redirectByRole = async () => {
     const sessionRes = await fetch("/api/auth/session");
@@ -44,6 +57,7 @@ export function AuthPage({ defaultTab = "login" }: { defaultTab?: Tab }) {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setInfo("");
     if (!email.trim()) {
       setError("Veuillez entrer votre email.");
       return;
@@ -58,13 +72,14 @@ export function AuthPage({ defaultTab = "login" }: { defaultTab?: Tab }) {
     }
     setLoading(true);
     try {
+      const normalizedEmail = email.trim().toLowerCase();
       const res = await signIn("credentials", {
-        email: email.trim().toLowerCase(),
+        email: normalizedEmail,
         password,
         redirect: false,
       });
       if (!res || res.error) {
-        setError("Email ou mot de passe incorrect.");
+        setError("Email/mot de passe incorrect ou email non confirmé.");
       } else {
         await redirectByRole();
       }
@@ -78,6 +93,7 @@ export function AuthPage({ defaultTab = "login" }: { defaultTab?: Tab }) {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setInfo("");
     if (!email.trim()) {
       setError("Veuillez entrer votre email.");
       return;
@@ -106,19 +122,38 @@ export function AuthPage({ defaultTab = "login" }: { defaultTab?: Tab }) {
         setError(data.error ?? "Une erreur est survenue.");
         return;
       }
-      const res = await signIn("credentials", {
-        email: email.trim().toLowerCase(),
-        password,
-        redirect: false,
-      });
-      if (!res || res.error) {
-        setError("Compte créé ! Connectez-vous ci-dessous.");
-        switchTab("login");
-      } else {
-        await redirectByRole();
-      }
+      setTab("login");
+      setInfo(data.message ?? "Compte créé. Vérifiez votre email.");
     } catch {
       setError("Erreur serveur. Réessayez.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!email.trim()) {
+      setError("Entrez votre email pour renvoyer le lien de confirmation.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setInfo("");
+    try {
+      const res = await fetch("/api/account/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Impossible de renvoyer l'email.");
+        return;
+      }
+      setInfo(data.message ?? "Email de confirmation renvoyé.");
+    } catch {
+      setError("Erreur réseau. Réessayez.");
     } finally {
       setLoading(false);
     }
@@ -188,6 +223,12 @@ export function AuthPage({ defaultTab = "login" }: { defaultTab?: Tab }) {
           </div>
         )}
 
+        {info && (
+          <div className="mb-5 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            {info}
+          </div>
+        )}
+
         {/* ── Formulaire connexion ── */}
         {tab === "login" && (
           <form onSubmit={handleLogin} noValidate className="space-y-5">
@@ -237,6 +278,23 @@ export function AuthPage({ defaultTab = "login" }: { defaultTab?: Tab }) {
               {loading && <Loader2 size={16} className="animate-spin" />}
               Se connecter
             </button>
+
+            <div className="flex items-center justify-between gap-3 text-xs">
+              <Link
+                href="/compte/mot-de-passe-oublie"
+                className="font-medium text-neutral-500 hover:text-primary"
+              >
+                Mot de passe oublié ?
+              </Link>
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                disabled={loading}
+                className="font-medium text-neutral-500 hover:text-primary disabled:opacity-50"
+              >
+                Renvoyer l&apos;email de confirmation
+              </button>
+            </div>
 
             <p className="text-center text-sm text-neutral-500">
               Pas encore de compte?{" "}
@@ -342,7 +400,7 @@ export function AuthPage({ defaultTab = "login" }: { defaultTab?: Tab }) {
         {/* Photo */}
         <div className="relative h-72 w-72 overflow-hidden rounded-[2rem] shadow-md xl:h-80 xl:w-80">
           <Image
-            src="/atelier.jpg"
+            src="/logo.jpg"
             alt="La boutique Les P'tits Bonheurs"
             fill
             className="object-cover"

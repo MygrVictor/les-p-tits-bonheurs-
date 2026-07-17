@@ -2,9 +2,11 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { AuthPage } from "@/components/store/auth-page";
 import { SignOutButton } from "@/components/store/sign-out-button";
+import { AccountProfileForm } from "@/components/store/account-profile-form";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Package, ShoppingBag, UserRound } from "lucide-react";
+import { Package, ShoppingBag, Truck } from "lucide-react";
+import { getCarrier, getTrackingUrl } from "@/lib/carriers";
 
 const STATUS_LABEL: Record<string, string> = {
   PENDING: "En attente",
@@ -25,12 +27,11 @@ const STATUS_COLOR: Record<string, string> = {
 export default async function ComptePage({
   searchParams,
 }: {
-  searchParams?: Promise<{ tab?: string; vue?: string }>;
+  searchParams?: Promise<{ tab?: string }>;
 }) {
   const session = await auth();
   const params = await searchParams;
   const defaultTab = params?.tab === "register" ? "register" : "login";
-  const vue = params?.vue === "profil" ? "profil" : "commandes";
 
   if (session?.user?.role === "ADMIN") {
     redirect("/admin");
@@ -46,61 +47,67 @@ export default async function ComptePage({
   }
 
   /* ── Connecté ── */
-  const orders = await prisma.order
-    .findMany({
-      where: { userId: session.user.id as string },
-      include: {
-        items: {
-          include: { product: { select: { name: true } } },
+  const [user, orders] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: session.user.id as string },
+      select: { name: true, email: true, address: true },
+    }),
+    prisma.order
+      .findMany({
+        where: { userId: session.user.id as string },
+        select: {
+          id: true,
+          total: true,
+          status: true,
+          createdAt: true,
+          carrier: true,
+          trackingNumber: true,
+          items: {
+            select: {
+              id: true,
+              quantity: true,
+              price: true,
+              product: { select: { name: true } },
+            },
+          },
         },
-      },
-      orderBy: { createdAt: "desc" },
-    })
-    .catch(() => []);
+        orderBy: { createdAt: "desc" },
+      })
+      .catch(() => []),
+  ]);
 
   return (
     <section className="space-y-8">
-      {/* En-tête */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">
             ✦ Espace personnel
           </p>
           <h1 className="mt-1 font-serif text-4xl text-ink">Mon compte</h1>
-          <p className="mt-1 text-sm text-neutral-500">{session.user.email}</p>
+          <p className="mt-1 text-sm text-neutral-500">
+            {user?.email ?? session.user.email}
+          </p>
         </div>
         <SignOutButton />
       </div>
 
-      {/* Onglets */}
-      <div className="flex rounded-2xl bg-neutral-100 p-1 text-sm font-semibold">
-        <Link
-          href="/compte?vue=commandes"
-          className={
-            "flex-1 rounded-xl py-2.5 text-center transition " +
-            (vue === "commandes"
-              ? "bg-white text-ink shadow-sm"
-              : "text-neutral-500 hover:text-ink")
-          }
-        >
-          Mes commandes
-        </Link>
-        <Link
-          href="/compte?vue=profil"
-          className={
-            "flex-1 rounded-xl py-2.5 text-center transition " +
-            (vue === "profil"
-              ? "bg-white text-ink shadow-sm"
-              : "text-neutral-500 hover:text-ink")
-          }
-        >
-          Mon profil
-        </Link>
-      </div>
+      <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start">
+        <div className="lg:sticky lg:top-24">
+          <AccountProfileForm
+            initialName={user?.name ?? session.user.name ?? null}
+            initialEmail={user?.email ?? session.user.email ?? ""}
+            initialAddress={user?.address ?? null}
+          />
+        </div>
 
-      {/* ── Onglet commandes ── */}
-      {vue === "commandes" && (
         <div className="space-y-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">
+              ✦ Commandes
+            </p>
+            <h2 className="mt-1 font-serif text-3xl text-ink">Mes commandes</h2>
+          </div>
+
           {orders.length === 0 ? (
             <div className="flex flex-col items-center gap-4 rounded-3xl border border-neutral-100 bg-white py-16 text-center shadow-soft">
               <ShoppingBag size={36} className="text-neutral-300" />
@@ -170,30 +177,33 @@ export default async function ComptePage({
                       ))}
                     </ul>
                   )}
+                  {order.trackingNumber && (
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-blush-50/60 px-4 py-3 text-xs text-neutral-600">
+                      <span className="flex items-center gap-2">
+                        <Truck size={14} className="shrink-0 text-primary" />
+                        {getCarrier(order.carrier)?.label ??
+                          "Colis expédié"} — {order.trackingNumber}
+                      </span>
+                      {getTrackingUrl(order.carrier, order.trackingNumber) && (
+                        <a
+                          href={
+                            getTrackingUrl(order.carrier, order.trackingNumber)!
+                          }
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-semibold text-primary hover:underline"
+                        >
+                          Suivre mon colis →
+                        </a>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           )}
         </div>
-      )}
-
-      {/* ── Onglet profil ── */}
-      {vue === "profil" && (
-        <div className="max-w-sm space-y-6 rounded-3xl border border-neutral-100 bg-white p-8 shadow-soft">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#fff5f8]">
-              <UserRound size={24} className="text-primary" />
-            </div>
-            <div>
-              <p className="font-semibold text-ink">{session.user.email}</p>
-              <p className="text-xs text-neutral-400">Client</p>
-            </div>
-          </div>
-          <div className="border-t border-neutral-100 pt-6">
-            <SignOutButton />
-          </div>
-        </div>
-      )}
+      </div>
     </section>
   );
 }

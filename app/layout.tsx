@@ -2,10 +2,22 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 
+const BASE_URL = process.env.NEXTAUTH_URL ?? "https://lespetitsbonheurs.fr";
+
 export const metadata: Metadata = {
-  title: "Les P'tits Bonheurs",
+  metadataBase: new URL(BASE_URL),
+  title: {
+    default: "Les P'tits Bonheurs — Bijoux & Accessoires Artisanaux",
+    template: "%s — Les P'tits Bonheurs",
+  },
   description:
-    "Boutique e-commerce élégante de bijoux, mode, déco et papeterie.",
+    "Boutique en ligne de bijoux, mode et accessoires artisanaux. Sélection bohème et colorée, livrée en France et en Europe.",
+  openGraph: {
+    siteName: "Les P'tits Bonheurs",
+    locale: "fr_FR",
+    type: "website",
+  },
+  robots: { index: true, follow: true },
 };
 
 export default function RootLayout({

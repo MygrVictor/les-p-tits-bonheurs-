@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { issueEmailVerificationToken } from "@/lib/auth-tokens";
+import { sendEmailVerification } from "@/lib/auth-notifications";
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -37,11 +39,20 @@ export async function POST(req: Request) {
 
     const hashed = await hash(password, 12);
 
-    await prisma.user.create({
+    const user = await prisma.user.create({
       data: { email: email.toLowerCase(), password: hashed },
     });
 
-    return NextResponse.json({ success: true }, { status: 201 });
+    const token = await issueEmailVerificationToken(user.id);
+    await sendEmailVerification({ email: user.email, token });
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Compte créé. Vérifiez votre email pour activer votre compte.",
+      },
+      { status: 201 },
+    );
   } catch {
     return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });
   }

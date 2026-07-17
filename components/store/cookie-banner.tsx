@@ -13,11 +13,13 @@ export function CookieBanner() {
 
   const accept = () => {
     localStorage.setItem("lpb-cookie-consent", "accepted");
+    window.dispatchEvent(new Event("lpb-cookie-updated"));
     setVisible(false);
   };
 
   const decline = () => {
     localStorage.setItem("lpb-cookie-consent", "declined");
+    window.dispatchEvent(new Event("lpb-cookie-updated"));
     setVisible(false);
   };
 
@@ -27,9 +29,12 @@ export function CookieBanner() {
     <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-neutral-100 bg-white px-4 py-4 shadow-2xl sm:px-6">
       <div className="mx-auto flex max-w-5xl flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
         <p className="flex-1 text-sm leading-6 text-neutral-700">
-          🍪 Nous utilisons des cookies pour améliorer votre expérience.
-          En continuant, vous acceptez notre{" "}
-          <Link href="/politique-de-confidentialite" className="underline hover:text-blush-700">
+          🍪 Nous utilisons des cookies pour améliorer votre expérience. En
+          continuant, vous acceptez notre{" "}
+          <Link
+            href="/politique-de-confidentialite"
+            className="underline hover:text-blush-700"
+          >
             politique de confidentialité
           </Link>
           .

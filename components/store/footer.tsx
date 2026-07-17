@@ -10,7 +10,6 @@ const navLinks = [
   { label: "Lifestyle", href: "/categorie/lifestyle" },
   { label: "Décoration & Maison", href: "/categorie/decoration-maison" },
   { label: "Papeterie", href: "/categorie/papeterie" },
-  { label: "Notre histoire", href: "/a-propos" },
   { label: "Contact", href: "/contact" },
 ];
 
@@ -30,7 +29,7 @@ export function StoreFooter() {
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}
           <div className="space-y-4 lg:col-span-2">
-            <p className="font-serif text-2xl text-ink">
+            <p className="font-brand text-2xl font-bold text-ink">
               Les P&apos;tits Bonheurs
             </p>
             <p className="max-w-sm text-sm leading-7 text-neutral-600">

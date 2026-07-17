@@ -6,56 +6,34 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { SafeImage } from "@/components/ui/image";
 import { newBrands, type NewBrand } from "@/lib/new-brands";
 
-function chunk<T>(items: T[], size: number): T[][] {
-  if (items.length === 0) return [];
-  const groups: T[][] = [];
-  for (let i = 0; i < items.length; i += size) {
-    groups.push(items.slice(i, i + size));
-  }
-  return groups;
-}
+/** Une slide = les 3 photos d'UNE marque, collées côte à côte (sans gap, angles carrés). */
+function BrandSlidePhotos({ brand }: Readonly<{ brand: NewBrand }>) {
+  const photos = brand.images.slice(0, 3);
 
-function BrandSlideItem({ brand }: Readonly<{ brand: NewBrand }>) {
   return (
-    <Link
-      href={brand.href}
-      className="group relative aspect-[3/4] flex-1 overflow-hidden rounded-3xl bg-neutral-100 sm:aspect-[4/5]"
-    >
-      <SafeImage
-        src={brand.image}
-        alt={brand.name}
-        fill
-        className="object-cover transition duration-700 group-hover:scale-105"
-        sizes="(max-width: 640px) 33vw, 25vw"
-      />
-
-      {/* Dégradé bas pour lisibilité du texte */}
-      <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-
-      {/* Étiquette */}
-      <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest text-primary shadow sm:left-4 sm:top-4 sm:px-3 sm:text-[10px]">
-        Nouvelle marque
-      </span>
-
-      {/* Nom + tagline */}
-      <div className="absolute inset-x-0 bottom-0 p-3 sm:p-5">
-        <p className="font-serif text-base leading-tight text-white sm:text-xl">
-          {brand.name}
-        </p>
-        {brand.tagline && (
-          <p className="mt-0.5 text-[11px] text-white/80 sm:text-xs">
-            {brand.tagline}
-          </p>
-        )}
-      </div>
-    </Link>
+    <div className="flex w-full shrink-0 snap-start">
+      {photos.map((src, i) => (
+        <div
+          key={`${brand.id}-${i}`}
+          className="relative aspect-[3/4] flex-1 overflow-hidden bg-neutral-100 sm:aspect-[4/5]"
+        >
+          <SafeImage
+            src={src}
+            alt={`${brand.name} — photo ${i + 1}`}
+            fill
+            className="object-cover"
+            sizes="(max-width: 640px) 33vw, 25vw"
+            priority={i === 0}
+          />
+        </div>
+      ))}
+    </div>
   );
 }
 
 export function NewBrandsCarousel() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
-  const slides = chunk(newBrands, 3);
 
   const scrollToSlide = (index: number) => {
     const el = scrollRef.current;
@@ -65,7 +43,7 @@ export function NewBrandsCarousel() {
 
   const scrollByOne = (direction: 1 | -1) => {
     scrollToSlide(
-      Math.min(Math.max(activeIndex + direction, 0), slides.length - 1),
+      Math.min(Math.max(activeIndex + direction, 0), newBrands.length - 1),
     );
   };
 
@@ -84,6 +62,8 @@ export function NewBrandsCarousel() {
 
   if (newBrands.length === 0) return null;
 
+  const activeBrand = newBrands[activeIndex] ?? newBrands[0];
+
   return (
     <section className="space-y-4">
       <div>
@@ -95,30 +75,24 @@ export function NewBrandsCarousel() {
         </h2>
       </div>
 
+      {/* Piste défilante — 1 slide = 1 marque + ses 3 photos */}
       <div className="relative">
         <div
           ref={scrollRef}
           className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto scroll-smooth"
         >
-          {slides.map((slide, i) => (
-            <div
-              key={`slide-${i}`}
-              className="flex w-full shrink-0 snap-start gap-3 sm:gap-4"
-            >
-              {slide.map((brand) => (
-                <BrandSlideItem key={brand.id} brand={brand} />
-              ))}
-            </div>
+          {newBrands.map((brand) => (
+            <BrandSlidePhotos key={brand.id} brand={brand} />
           ))}
         </div>
 
-        {slides.length > 1 && (
+        {newBrands.length > 1 && (
           <>
             <button
               type="button"
               onClick={() => scrollByOne(-1)}
               disabled={activeIndex === 0}
-              aria-label="Marques précédentes"
+              aria-label="Marque précédente"
               className="absolute left-2 top-1/2 hidden -translate-y-1/2 items-center justify-center rounded-full bg-white/90 p-2 text-ink shadow-md transition hover:bg-white disabled:pointer-events-none disabled:opacity-0 sm:flex"
             >
               <ChevronLeft size={18} />
@@ -126,8 +100,8 @@ export function NewBrandsCarousel() {
             <button
               type="button"
               onClick={() => scrollByOne(1)}
-              disabled={activeIndex === slides.length - 1}
-              aria-label="Marques suivantes"
+              disabled={activeIndex === newBrands.length - 1}
+              aria-label="Marque suivante"
               className="absolute right-2 top-1/2 hidden -translate-y-1/2 items-center justify-center rounded-full bg-white/90 p-2 text-ink shadow-md transition hover:bg-white disabled:pointer-events-none disabled:opacity-0 sm:flex"
             >
               <ChevronRight size={18} />
@@ -136,14 +110,36 @@ export function NewBrandsCarousel() {
         )}
       </div>
 
-      {slides.length > 1 && (
+      {/* Étiquette de la marque active — se met à jour au fil du défilement */}
+      <Link
+        href={activeBrand.href}
+        className="group flex items-center justify-between"
+      >
+        <div className="flex items-center gap-3">
+          <span className="inline-block h-2 w-2 shrink-0 rounded-full bg-primary" />
+          <span className="font-serif text-base text-ink sm:text-lg">
+            {activeBrand.name}
+          </span>
+          {activeBrand.tagline && (
+            <span className="hidden text-xs uppercase tracking-widest text-neutral-400 sm:inline">
+              · {activeBrand.tagline}
+            </span>
+          )}
+        </div>
+        <span className="shrink-0 text-xs font-medium uppercase tracking-widest text-primary transition group-hover:underline">
+          Voir la collection →
+        </span>
+      </Link>
+
+      {/* Points de pagination — 1 par marque */}
+      {newBrands.length > 1 && (
         <div className="flex justify-center gap-1.5">
-          {slides.map((_, i) => (
+          {newBrands.map((brand, i) => (
             <button
-              key={`dot-${i}`}
+              key={brand.id}
               type="button"
               onClick={() => scrollToSlide(i)}
-              aria-label={`Aller au slide ${i + 1}`}
+              aria-label={`Voir ${brand.name}`}
               className={`h-1.5 rounded-full transition-all ${
                 i === activeIndex ? "w-6 bg-primary" : "w-1.5 bg-neutral-300"
               }`}

@@ -83,7 +83,7 @@ export function StoreHeader() {
           {/* Logo texte — droite, desktop */}
           <Link
             href="/"
-            className="hidden shrink-0 font-serif text-lg text-white lg:block xl:text-xl"
+            className="hidden shrink-0 font-brand text-lg font-bold text-white lg:block xl:text-xl"
           >
             Les P&apos;tits Bonheurs
           </Link>
@@ -233,13 +233,6 @@ export function StoreHeader() {
               })}
             </div>
             <div className="mt-6 border-t border-neutral-100 pt-4 space-y-2">
-              <Link
-                href="/a-propos"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium text-ink hover:bg-blush-50"
-              >
-                Notre histoire
-              </Link>
               <Link
                 href="/compte"
                 onClick={() => setMobileOpen(false)}

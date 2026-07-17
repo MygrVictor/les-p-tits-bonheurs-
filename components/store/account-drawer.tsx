@@ -9,11 +9,9 @@ import {
   ShoppingBag,
   LogOut,
   Loader2,
-  Save,
 } from "lucide-react";
 import Link from "next/link";
-
-type AccountTab = "commandes" | "infos";
+import { AccountProfileForm } from "@/components/store/account-profile-form";
 
 interface OrderItem {
   id: string;
@@ -28,6 +26,12 @@ interface Order {
   status: string;
   createdAt: string;
   items: OrderItem[];
+}
+
+interface AccountUser {
+  email: string;
+  name?: string | null;
+  address?: string | null;
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -46,9 +50,6 @@ const STATUS_COLOR: Record<string, string> = {
   CANCELLED: "bg-neutral-100 text-neutral-500",
 };
 
-const inputCls =
-  "w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-neutral-400 focus:border-primary focus:ring-2 focus:ring-primary/20";
-
 export function AccountDrawer({
   open,
   onClose,
@@ -57,33 +58,27 @@ export function AccountDrawer({
   onClose: () => void;
 }) {
   const { data: session } = useSession();
-  const [tab, setTab] = useState<AccountTab>("commandes");
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
+  const [user, setUser] = useState<AccountUser | null>(null);
 
-  // Infos form
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [saveMsg, setSaveMsg] = useState("");
-  const [saveError, setSaveError] = useState("");
-
-  // Pré-remplir avec les données serveur à l'ouverture
   useEffect(() => {
     if (!open || !session?.user) return;
+    setLoadingOrders(true);
     fetch("/api/account")
       .then((r) => r.json())
       .then((data) => {
         setOrders(data.orders ?? []);
-        setEmail(data.user?.email ?? session.user?.email ?? "");
-        setName(data.user?.name ?? "");
+        setUser({
+          email: data.user?.email ?? session.user?.email ?? "",
+          name: data.user?.name ?? session.user?.name ?? null,
+          address: data.user?.address ?? null,
+        });
       })
       .catch(() => {})
       .finally(() => setLoadingOrders(false));
-    setLoadingOrders(true);
   }, [open, session]);
 
-  // Fermer avec Escape
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -92,43 +87,16 @@ export function AccountDrawer({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaveMsg("");
-    setSaveError("");
-    setSaving(true);
-    try {
-      const res = await fetch("/api/account", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setSaveError(data.error ?? "Erreur lors de la mise à jour.");
-      } else {
-        setSaveMsg("Informations enregistrées !");
-      }
-    } catch {
-      setSaveError("Erreur serveur. Réessayez.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-ink/40 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* Panel */}
       <div className="relative flex w-full max-w-sm flex-col bg-white shadow-2xl animate-slide-in-right sm:max-w-md">
-        {/* En-tête */}
         <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fff5f8]">
@@ -136,7 +104,7 @@ export function AccountDrawer({
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-ink">
-                {email || session?.user?.email}
+                {user?.email || session?.user?.email}
               </p>
               <p className="text-xs text-neutral-400">Espace personnel</p>
             </div>
@@ -150,34 +118,25 @@ export function AccountDrawer({
           </button>
         </div>
 
-        {/* Onglets */}
-        <div className="flex gap-6 border-b border-neutral-100 px-6">
-          {(
-            [
-              { key: "commandes", label: "Mes commandes" },
-              { key: "infos", label: "Mes informations" },
-            ] as const
-          ).map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              className={
-                "py-3 text-sm font-semibold transition border-b-2 " +
-                (tab === key
-                  ? "border-primary text-ink"
-                  : "border-transparent text-neutral-400 hover:text-ink")
-              }
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Contenu scrollable */}
         <div className="flex-1 overflow-y-auto px-6 py-6">
-          {/* ── Commandes ── */}
-          {tab === "commandes" && (
-            <>
+          <div className="space-y-6">
+            <AccountProfileForm
+              initialName={user?.name ?? session?.user?.name ?? null}
+              initialEmail={user?.email ?? session?.user?.email ?? ""}
+              initialAddress={user?.address ?? null}
+              compact
+            />
+
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">
+                  ✦ Commandes
+                </p>
+                <h2 className="mt-1 font-serif text-2xl text-ink">
+                  Mes commandes
+                </h2>
+              </div>
+
               {loadingOrders ? (
                 <div className="flex items-center justify-center py-16">
                   <Loader2
@@ -186,7 +145,7 @@ export function AccountDrawer({
                   />
                 </div>
               ) : orders.length === 0 ? (
-                <div className="flex flex-col items-center gap-4 py-16 text-center">
+                <div className="flex flex-col items-center gap-4 rounded-2xl border border-neutral-100 py-12 text-center">
                   <ShoppingBag size={36} className="text-neutral-200" />
                   <p className="text-sm text-neutral-400">
                     Aucune commande pour l&apos;instant.
@@ -257,68 +216,10 @@ export function AccountDrawer({
                   ))}
                 </div>
               )}
-            </>
-          )}
-
-          {/* ── Informations ── */}
-          {tab === "infos" && (
-            <form onSubmit={handleSave} noValidate className="space-y-5">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                  Nom
-                </label>
-                <input
-                  type="text"
-                  autoComplete="name"
-                  placeholder="Votre nom"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className={inputCls}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  autoComplete="email"
-                  placeholder="votre@email.fr"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={inputCls}
-                />
-              </div>
-
-              {saveError && (
-                <p className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-600">
-                  {saveError}
-                </p>
-              )}
-              {saveMsg && (
-                <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                  {saveMsg}
-                </p>
-              )}
-
-              <button
-                type="submit"
-                disabled={saving}
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-semibold text-white transition hover:bg-primary-hover disabled:opacity-60"
-              >
-                {saving ? (
-                  <Loader2 size={15} className="animate-spin" />
-                ) : (
-                  <Save size={15} />
-                )}
-                Enregistrer
-              </button>
-            </form>
-          )}
+            </div>
+          </div>
         </div>
 
-        {/* Pied : déconnexion */}
         <div className="border-t border-neutral-100 px-6 py-4">
           <button
             onClick={() => signOut({ callbackUrl: "/" })}

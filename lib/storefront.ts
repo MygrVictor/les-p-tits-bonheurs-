@@ -148,17 +148,9 @@ export async function getBentoStoreProducts(
   const dbProducts = await prisma.product.findMany({
     where: { status: "ACTIVE" },
     include: { variants: true },
-    orderBy: { createdAt: "desc" },
-    take: 60,
+    orderBy: [{ isNew: "desc" }, { createdAt: "desc" }],
+    take: limit,
   });
 
-  return dbProducts
-    .map(mapDbProduct)
-    .sort((a, b) => {
-      if (a.isNew !== b.isNew) return a.isNew ? -1 : 1;
-      const aTime = a.createdAt?.getTime() ?? 0;
-      const bTime = b.createdAt?.getTime() ?? 0;
-      return bTime - aTime;
-    })
-    .slice(0, limit);
+  return dbProducts.map(mapDbProduct);
 }

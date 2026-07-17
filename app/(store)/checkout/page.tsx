@@ -18,6 +18,7 @@ type ShippingForm = {
   address: string;
   postalCode: string;
   city: string;
+  country: string;
 };
 
 function CheckoutForm({ isGuest }: Readonly<{ isGuest: boolean }>) {
@@ -33,6 +34,7 @@ function CheckoutForm({ isGuest }: Readonly<{ isGuest: boolean }>) {
     address: "",
     postalCode: "",
     city: "",
+    country: "FR",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -58,7 +60,8 @@ function CheckoutForm({ isGuest }: Readonly<{ isGuest: boolean }>) {
       !form.email ||
       !form.address ||
       !form.postalCode ||
-      !form.city
+      !form.city ||
+      !form.country
     ) {
       setError("Merci de remplir tous les champs.");
       return;
@@ -76,6 +79,7 @@ function CheckoutForm({ isGuest }: Readonly<{ isGuest: boolean }>) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: form.email,
+          shippingCountry: form.country,
           items: items.map((item) => ({
             productId: item.productId,
             variantId: item.variantId,
@@ -218,6 +222,28 @@ function CheckoutForm({ isGuest }: Readonly<{ isGuest: boolean }>) {
               className={inputClass}
             />
           </div>
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+            Pays
+          </label>
+          <select
+            required
+            value={form.country}
+            onChange={(event) =>
+              setForm((f) => ({ ...f, country: event.target.value }))
+            }
+            className={inputClass}
+          >
+            <option value="FR">France</option>
+            <option value="BE">Belgique</option>
+            <option value="CH">Suisse</option>
+            <option value="LU">Luxembourg</option>
+            <option value="DE">Allemagne</option>
+            <option value="ES">Espagne</option>
+            <option value="IT">Italie</option>
+            <option value="CA">Canada</option>
+          </select>
         </div>
       </section>
 

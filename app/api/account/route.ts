@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
+import { hash } from "bcryptjs";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -33,9 +35,10 @@ export async function PATCH(req: Request) {
   }
 
   const body = await req.json();
-  const { name, email } = body as {
+  const { name, email, address } = body as {
     name?: string;
     email?: string;
+    address?: string;
   };
 
   if (email && email !== session.user.email) {
@@ -55,13 +58,65 @@ export async function PATCH(req: Request) {
     data: {
       ...(name !== undefined && { name: name.trim() || null }),
       ...(email !== undefined && { email: email.toLowerCase().trim() }),
+      ...(address !== undefined && { address: address.trim() || null }),
     },
-    select: { id: true, email: true, name: true },
+    select: { id: true, email: true, name: true, address: true },
   });
 
   return NextResponse.json({ user: updated });
 }
 
 export async function DELETE() {
-  return NextResponse.json({ success: true });
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+  }
+
+  const userId = session.user.id as string;
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      role: true,
+      _count: { select: { orders: true } },
+    },
+  });
+
+  if (!user || user.role === "ADMIN") {
+    return NextResponse.json(
+      { error: "Suppression impossible." },
+      { status: 400 },
+    );
+  }
+
+  if (user._count.orders === 0) {
+    await prisma.$transaction([
+      prisma.emailVerificationToken.deleteMany({ where: { userId } }),
+      prisma.passwordResetToken.deleteMany({ where: { userId } }),
+      prisma.user.delete({ where: { id: userId } }),
+    ]);
+    return NextResponse.json({ success: true, mode: "deleted" });
+  }
+
+  const anonymizedEmail = `deleted+${userId}@deleted.local`;
+  const randomPassword = await hash(randomUUID(), 12);
+
+  await prisma.$transaction([
+    prisma.emailVerificationToken.deleteMany({ where: { userId } }),
+    prisma.passwordResetToken.deleteMany({ where: { userId } }),
+    prisma.user.update({
+      where: { id: userId },
+      data: {
+        email: anonymizedEmail,
+        password: randomPassword,
+        name: null,
+        address: null,
+        deletedAt: new Date(),
+        emailVerifiedAt: null,
+      },
+    }),
+  ]);
+
+  return NextResponse.json({ success: true, mode: "anonymized" });
 }

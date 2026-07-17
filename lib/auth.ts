@@ -34,6 +34,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
+        if (user.deletedAt) {
+          console.warn(`[auth] compte supprimé/anonymisé: ${normalizedEmail}`);
+          return null;
+        }
+
+        if (!user.emailVerifiedAt) {
+          console.warn(`[auth] email non vérifié: ${normalizedEmail}`);
+          return null;
+        }
+
         const matches = await compare(parsed.data.password, user.password);
         if (!matches) {
           console.warn(

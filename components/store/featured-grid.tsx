@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SafeImage } from "@/components/ui/image";
 import { getFeaturedStoreProducts } from "@/lib/storefront";
+import { QuickAddToCart } from "@/components/store/quick-add-to-cart";
 
 /**
  * Sélection « Coups de cœur » — présentation moderne et épurée (pas de
@@ -32,39 +33,56 @@ export async function FeaturedGrid() {
           const hasSale = product.salePrice !== null;
 
           return (
-            <Link
+            <article
               key={product.id}
-              href={`/produit/${product.id}`}
-              className="group block"
+              className="group overflow-hidden rounded-2xl border border-neutral-200/70 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
             >
-              <div className="relative aspect-[3/4] overflow-hidden rounded-2xl bg-neutral-50">
-                <SafeImage
-                  src={product.images[0]}
-                  alt={product.name}
-                  fill
-                  className="object-cover transition duration-700 ease-out group-hover:scale-[1.03]"
-                  sizes="(max-width: 640px) 45vw, 22vw"
-                />
-              </div>
-              <div className="mt-3 space-y-0.5">
-                {product.isNew && (
-                  <p className="text-[10px] font-medium uppercase tracking-widest text-neutral-400">
-                    Nouveau
-                  </p>
-                )}
-                <p className="truncate text-sm font-medium text-ink">
-                  {product.name}
-                </p>
-                <p className="text-sm text-neutral-500">
-                  {(product.salePrice ?? product.price).toFixed(0)} €
-                  {hasSale && (
-                    <span className="ml-2 text-neutral-400 line-through">
-                      {product.price.toFixed(0)} €
-                    </span>
+              <Link href={`/produit/${product.id}`} className="block">
+                <div className="relative aspect-square overflow-hidden bg-neutral-50">
+                  <SafeImage
+                    src={product.images[0]}
+                    alt={product.name}
+                    fill
+                    className="object-cover transition duration-700 ease-out group-hover:scale-[1.03]"
+                    sizes="(max-width: 640px) 45vw, 22vw"
+                  />
+                  {product.isNew && (
+                    <div className="absolute left-3 top-3">
+                      <span className="inline-flex items-center rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-ink shadow-sm backdrop-blur-sm">
+                        Nouveau
+                      </span>
+                    </div>
                   )}
-                </p>
+                </div>
+                <div className="space-y-2 p-3 sm:p-4">
+                  <h3 className="line-clamp-2 min-h-[2.75rem] text-sm font-medium text-ink sm:text-base">
+                    {product.name}
+                  </h3>
+                  <div className="flex items-end justify-between gap-2">
+                    <p className="text-sm font-semibold text-ink sm:text-base">
+                      {(product.salePrice ?? product.price).toFixed(0)} €
+                      {hasSale && (
+                        <span className="ml-2 text-xs font-normal text-neutral-400 line-through sm:text-sm">
+                          {product.price.toFixed(0)} €
+                        </span>
+                      )}
+                    </p>
+                    <span className="text-[11px] text-neutral-500">
+                      {product.stock > 0 ? "En stock" : "Rupture"}
+                    </span>
+                  </div>
+                </div>
+              </Link>
+              <div className="flex items-center justify-between border-t border-neutral-100 px-3 py-2.5 sm:px-4 sm:py-3">
+                <Link
+                  href={`/produit/${product.id}`}
+                  className="text-xs font-medium text-neutral-500 transition hover:text-ink"
+                >
+                  Voir le produit
+                </Link>
+                <QuickAddToCart product={product} compact />
               </div>
-            </Link>
+            </article>
           );
         })}
       </div>

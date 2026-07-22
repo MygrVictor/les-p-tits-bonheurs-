@@ -1,13 +1,6 @@
-import { NextResponse } from "next/server";
-import NextAuth from "next-auth";
-import { authConfig } from "@/lib/auth.config";
+import { NextRequest, NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
 import { rateLimit } from "@/lib/rate-limit";
-
-// Instance NextAuth dédiée au middleware, construite à partir de la config
-// "Edge-safe" uniquement (sans Prisma/bcryptjs). Cela évite d'embarquer des
-// dépendances Node.js incompatibles avec l'Edge Runtime dans le bundle du
-// middleware — voir lib/auth.config.ts.
-const { auth } = NextAuth(authConfig);
 
 // Routes soumises au rate limiting (hits par IP, fenêtre glissante 60 s)
 const RATE_LIMIT_RULES: { prefix: string; limit: number }[] = [
@@ -20,10 +13,13 @@ const RATE_LIMIT_RULES: { prefix: string; limit: number }[] = [
   { prefix: "/api/contact", limit: 10 },
 ];
 
-const authPaths = ["/api/auth"];
-
-export default auth((request) => {
+export default async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const token = await getToken({
+    req: request,
+    secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+    secureCookie: process.env.NODE_ENV === "production",
+  });
 
   // Connexion unique et simple : un seul point d'entrée (/compte) pour tout
   // le monde, client comme admin. Les anciennes routes de connexion séparées
@@ -47,7 +43,7 @@ export default auth((request) => {
   // cherchait le cookie non préfixé, ne le trouvait jamais en prod, et
   // provoquait une redirection infinie /admin ⇄ /compte.
   if (pathname.startsWith("/admin")) {
-    if (!request.auth?.user || request.auth.user.role !== "ADMIN") {
+    if (token?.role !== "ADMIN") {
       const loginUrl = new URL("/compte", request.url);
       return NextResponse.redirect(loginUrl);
     }
@@ -92,7 +88,7 @@ export default auth((request) => {
   }
 
   return response;
-});
+}
 
 export const config = {
   matcher: [

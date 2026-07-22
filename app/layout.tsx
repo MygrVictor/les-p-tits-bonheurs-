@@ -2,26 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 
-const FALLBACK_BASE_URL = "https://lespetitsbonheurs.fr";
-
-function resolveBaseUrl() {
-  const candidate = process.env.NEXTAUTH_URL?.trim();
-
-  if (!candidate) {
-    return FALLBACK_BASE_URL;
-  }
-
-  try {
-    return new URL(candidate).origin;
-  } catch {
-    return FALLBACK_BASE_URL;
-  }
-}
-
-const BASE_URL = resolveBaseUrl();
-
 export const metadata: Metadata = {
-  metadataBase: new URL(BASE_URL),
+  metadataBase: new URL("https://lespetitsbonheurs.fr"),
   title: {
     default: "Les P'tits Bonheurs — Bijoux & Accessoires Artisanaux",
     template: "%s — Les P'tits Bonheurs",

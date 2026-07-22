@@ -15,7 +15,7 @@ import { sendShippingNotification } from "@/lib/order-notifications";
 // Limite volontaire (pas une contrainte Cloudinary/DB) : 3 photos par
 // produit suffisent largement pour une boutique artisanale, et évitent des
 // fiches produit trop lourdes à charger côté client.
-const MAX_PRODUCT_IMAGES = 3;
+const MAX_PRODUCT_IMAGES = 6;
 
 function slugify(input: string): string {
   return input
@@ -273,6 +273,9 @@ export async function createProduct(formData: FormData) {
     String(formData.get("imageUrl1") ?? "").trim(),
     String(formData.get("imageUrl2") ?? "").trim(),
     String(formData.get("imageUrl3") ?? "").trim(),
+    String(formData.get("imageUrl4") ?? "").trim(),
+    String(formData.get("imageUrl5") ?? "").trim(),
+    String(formData.get("imageUrl6") ?? "").trim(),
   ];
   const files = formData
     .getAll("imagesFiles")

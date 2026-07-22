@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { hash } from "bcryptjs";
 import { auth } from "@/lib/auth";
+import { formatProfileAddress, parseProfileAddress } from "@/lib/address";
 import { prisma } from "@/lib/prisma";
 
 /** GET /api/account — informations + commandes de l'utilisateur connecté */
@@ -15,6 +16,7 @@ export async function GET() {
     where: { id: session.user.id as string },
     select: { id: true, email: true, name: true, address: true, role: true },
   });
+  const parsedAddress = parseProfileAddress(user?.address);
 
   const orders = await prisma.order.findMany({
     where: { userId: session.user.id as string },
@@ -24,7 +26,17 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json({ user, orders });
+  return NextResponse.json({
+    user: user
+      ? {
+          ...user,
+          address: parsedAddress.address,
+          postalCode: parsedAddress.postalCode,
+          city: parsedAddress.city,
+        }
+      : null,
+    orders,
+  });
 }
 
 /** PATCH /api/account — mise à jour nom, email, adresse */
@@ -35,11 +47,29 @@ export async function PATCH(req: Request) {
   }
 
   const body = await req.json();
-  const { name, email, address } = body as {
+  const { name, email, address, postalCode, city } = body as {
     name?: string;
     email?: string;
     address?: string;
+    postalCode?: string;
+    city?: string;
   };
+
+  const currentUser = await prisma.user.findUnique({
+    where: { id: session.user.id as string },
+    select: { address: true },
+  });
+  const currentAddress = parseProfileAddress(currentUser?.address);
+
+  const shouldUpdateAddress =
+    address !== undefined || postalCode !== undefined || city !== undefined;
+  const normalizedAddress = shouldUpdateAddress
+    ? formatProfileAddress({
+        address: address ?? currentAddress.address,
+        postalCode: postalCode ?? currentAddress.postalCode,
+        city: city ?? currentAddress.city,
+      })
+    : undefined;
 
   if (email && email !== session.user.email) {
     const exists = await prisma.user.findUnique({
@@ -58,12 +88,23 @@ export async function PATCH(req: Request) {
     data: {
       ...(name !== undefined && { name: name.trim() || null }),
       ...(email !== undefined && { email: email.toLowerCase().trim() }),
-      ...(address !== undefined && { address: address.trim() || null }),
+      ...(normalizedAddress !== undefined && {
+        address: normalizedAddress || null,
+      }),
     },
     select: { id: true, email: true, name: true, address: true },
   });
 
-  return NextResponse.json({ user: updated });
+  const parsedAddress = parseProfileAddress(updated.address);
+
+  return NextResponse.json({
+    user: {
+      ...updated,
+      address: parsedAddress.address,
+      postalCode: parsedAddress.postalCode,
+      city: parsedAddress.city,
+    },
+  });
 }
 
 export async function DELETE() {

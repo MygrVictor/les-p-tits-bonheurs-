@@ -3,7 +3,12 @@
 import Link from "next/link";
 import Image from "next/image";
 import { X, Minus, Plus, ShoppingBag } from "lucide-react";
-import { useCartStore, selectCartCount, selectCartTotal } from "@/lib/cart-store";
+import {
+  useCartStore,
+  selectCartCount,
+  selectCartTotal,
+} from "@/lib/cart-store";
+import { FREE_SHIPPING_THRESHOLD_CENTS } from "@/lib/shipping";
 
 export function CartDrawer({
   open,
@@ -57,7 +62,10 @@ export function CartDrawer({
           ) : (
             <ul className="space-y-4">
               {items.map((item) => (
-                <li key={item.id} className="flex gap-4 rounded-2xl bg-blush-50 p-3">
+                <li
+                  key={item.id}
+                  className="flex gap-4 rounded-2xl bg-blush-50 p-3"
+                >
                   <div className="relative h-20 w-16 shrink-0 overflow-hidden rounded-xl bg-white">
                     {item.productImage ? (
                       <Image
@@ -76,7 +84,9 @@ export function CartDrawer({
                       {item.productName}
                     </p>
                     {item.variantLabel && (
-                      <p className="text-xs text-neutral-500">{item.variantLabel}</p>
+                      <p className="text-xs text-neutral-500">
+                        {item.variantLabel}
+                      </p>
                     )}
                     <p className="text-sm font-semibold text-blush-700">
                       {(item.price * item.quantity).toFixed(2)} €
@@ -118,8 +128,40 @@ export function CartDrawer({
           <div className="border-t border-neutral-100 px-6 py-5 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm text-neutral-600">Sous-total</span>
-              <span className="font-semibold text-ink">{cartTotal.toFixed(2)} €</span>
+              <span className="font-semibold text-ink">
+                {cartTotal.toFixed(2)} €
+              </span>
             </div>
+            {FREE_SHIPPING_THRESHOLD_CENTS > 0 &&
+              (() => {
+                const thresholdEuros = FREE_SHIPPING_THRESHOLD_CENTS / 100;
+                const remaining = thresholdEuros - cartTotal;
+                if (remaining <= 0) {
+                  return (
+                    <div className="flex items-center gap-2 rounded-xl bg-green-50 px-3 py-2 text-xs font-medium text-green-700">
+                      🎁 Frais de port offerts !
+                    </div>
+                  );
+                }
+                const pct = Math.min(100, (cartTotal / thresholdEuros) * 100);
+                return (
+                  <div className="space-y-1.5">
+                    <p className="text-xs text-neutral-500">
+                      Plus que{" "}
+                      <span className="font-semibold text-ink">
+                        {remaining.toFixed(2)} €
+                      </span>{" "}
+                      pour les frais offerts
+                    </p>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
+                      <div
+                        className="h-full rounded-full bg-primary transition-all duration-300"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
             <p className="text-xs text-neutral-400">
               Livraison calculée à l’étape suivante
             </p>

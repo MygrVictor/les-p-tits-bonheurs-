@@ -23,7 +23,12 @@ const bodySchema = z.object({
     )
     .min(1)
     .max(30),
-  email: z.string().email().optional(),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  email: z.string().email(),
+  address: z.string().min(1),
+  postalCode: z.string().min(1),
+  city: z.string().min(1),
   shippingCountry: z.string().length(2),
 });
 
@@ -138,9 +143,18 @@ export async function POST(request: Request) {
     process.env.NEXTAUTH_URL ??
     "http://localhost:3000";
 
+  const cartTotalCents = metaItems.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0,
+  );
+
   const metadata = encodeCartMetadata(metaItems);
-  if (email) metadata.email = email;
+  metadata.email = email;
   metadata.shippingCountry = shippingCountry;
+  metadata.shippingName = `${parsed.data.firstName} ${parsed.data.lastName}`.trim();
+  metadata.shippingAddress = parsed.data.address;
+  metadata.shippingPostalCode = parsed.data.postalCode;
+  metadata.shippingCity = parsed.data.city;
 
   try {
     const checkoutSession = await stripe.checkout.sessions.create({
@@ -154,7 +168,10 @@ export async function POST(request: Request) {
       shipping_address_collection: {
         allowed_countries: ALLOWED_SHIPPING_COUNTRIES,
       },
-      shipping_options: getShippingOptionsForCountry(shippingCountry),
+      shipping_options: getShippingOptionsForCountry(
+        shippingCountry,
+        cartTotalCents,
+      ),
       metadata,
       success_url: `${origin}/commande/confirmation?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/checkout`,

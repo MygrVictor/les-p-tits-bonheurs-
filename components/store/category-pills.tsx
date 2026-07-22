@@ -18,11 +18,14 @@ export function CategoryPills() {
   const categories = storefrontMainMenu;
 
   return (
-    <div>
+    <div className="relative z-[90]">
       <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0 lg:overflow-visible">
         <div className="flex items-center gap-6 pb-3 sm:gap-8 lg:relative lg:z-30 lg:justify-center">
           {categories.map((category) => (
-            <div key={category.label} className="group relative shrink-0">
+            <div
+              key={category.label}
+              className="group relative z-0 shrink-0 hover:z-[110] focus-within:z-[110]"
+            >
               <Link
                 href={category.href}
                 className="inline-flex items-center whitespace-nowrap text-sm font-medium text-neutral-500 transition hover:text-primary"
@@ -31,7 +34,7 @@ export function CategoryPills() {
               </Link>
 
               {category.sections?.length ? (
-                <div className="pointer-events-none invisible absolute left-0 top-full z-40 mt-0 w-[min(90vw,44rem)] translate-y-1 rounded-2xl border border-blush-200 bg-blush-100 p-4 opacity-0 shadow-md transition-all duration-150 group-hover:pointer-events-auto group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                <div className="pointer-events-none invisible absolute left-0 top-full z-[120] mt-0 w-[min(90vw,44rem)] translate-y-1 rounded-2xl border border-blush-200 bg-blush-100 p-4 opacity-0 shadow-xl transition-all duration-150 group-hover:pointer-events-auto group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
                   <div className="grid gap-4 sm:grid-cols-2">
                     {category.sections.map((section) => {
                       const sectionLinks = getUniqueLinks(section.links);

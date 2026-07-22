@@ -1,5 +1,12 @@
 .env
 .env.local
+.env.production
+.env.*.local
+
+# Test outputs
+coverage/
+test-results/
+playwright-report/
 .next
 node_modules
 .DS_Store

@@ -16,12 +16,12 @@ export default function StoreLayout({
       <div className="pointer-events-none absolute -left-20 top-40 -z-10 h-64 w-64 rounded-full bg-[#f7d8e1]/40 blur-3xl" />
       <div className="pointer-events-none absolute -right-16 top-[26rem] -z-10 h-72 w-72 rounded-full bg-[#fdecef]/70 blur-3xl" />
       <StoreHeader />
-      <div className="border-b border-neutral-100/80 bg-white/80 px-4 py-4 backdrop-blur-sm sm:px-6 lg:px-8 xl:px-10">
+      <div className="relative z-[80] overflow-visible border-b border-neutral-100/80 bg-white/80 px-4 py-4 backdrop-blur-sm sm:px-6 lg:px-8 xl:px-10">
         <div className="mx-auto max-w-[1440px]">
           <CategoryPills />
         </div>
       </div>
-      <main className="mx-auto min-h-screen max-w-[1440px] px-4 pb-28 pt-8 sm:px-6 lg:px-8 lg:pb-16 lg:pt-10 xl:px-10 2xl:px-12">
+      <main className="relative z-0 mx-auto min-h-screen max-w-[1440px] px-4 pb-28 pt-8 sm:px-6 lg:px-8 lg:pb-16 lg:pt-10 xl:px-10 2xl:px-12">
         {children}
       </main>
       <StoreFooter />

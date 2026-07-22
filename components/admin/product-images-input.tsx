@@ -9,8 +9,9 @@ type FilePreview = {
 };
 
 export function ProductImagesInput() {
-  const [files, setFiles] = useState<Array<File | null>>([null, null, null]);
-  const [urls, setUrls] = useState<string[]>(["", "", ""]);
+  const MAX = 6;
+  const [files, setFiles] = useState<Array<File | null>>(Array(MAX).fill(null));
+  const [urls, setUrls] = useState<string[]>(Array(MAX).fill(""));
 
   const filePreviews = useMemo<FilePreview[]>(() => {
     return files
@@ -49,14 +50,14 @@ export function ProductImagesInput() {
     };
   }, [filePreviews]);
 
-  const previews = [...filePreviews, ...urlPreviews].slice(0, 3);
+  const previews = [...filePreviews, ...urlPreviews].slice(0, 6);
 
   return (
     <div className="md:col-span-2 space-y-4">
       <div>
         <label className="text-sm text-neutral-600">Images (upload)</label>
-        <div className="mt-1 grid gap-2 md:grid-cols-3">
-          {[0, 1, 2].map((index) => (
+        <div className="mt-1 grid gap-2 sm:grid-cols-2 md:grid-cols-3">
+          {Array.from({ length: MAX }, (_, index) => (
             <input
               key={`imagesFiles-${index}`}
               type="file"
@@ -67,13 +68,13 @@ export function ProductImagesInput() {
                 next[index] = event.target.files?.[0] ?? null;
                 setFiles(next);
               }}
-              className="w-full rounded-xl border border-neutral-200 px-3 py-2"
+              className="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm"
             />
           ))}
         </div>
         <p className="mt-1 text-xs text-neutral-500">
-          Ajoute jusqu&apos;à 3 images (1 par champ). Cloudinary si configuré,
-          sinon stockage local du serveur.
+          Ajoute jusqu&apos;à {MAX} images (1 par champ). Uploadées sur
+          Cloudinary.
         </p>
       </div>
 
@@ -81,8 +82,8 @@ export function ProductImagesInput() {
         <label className="text-sm text-neutral-600">
           Images (URLs, optionnel)
         </label>
-        <div className="mt-1 grid gap-2 md:grid-cols-3">
-          {[0, 1, 2].map((index) => (
+        <div className="mt-1 grid gap-2 sm:grid-cols-2 md:grid-cols-3">
+          {Array.from({ length: MAX }, (_, index) => (
             <input
               key={`imageUrl-${index}`}
               name={`imageUrl${index + 1}`}
@@ -93,12 +94,12 @@ export function ProductImagesInput() {
                 next[index] = event.target.value;
                 setUrls(next);
               }}
-              className="w-full rounded-xl border border-neutral-200 px-3 py-2"
+              className="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm"
             />
           ))}
         </div>
         <p className="mt-1 text-xs text-neutral-500">
-          Tu peux mixer upload + URLs, avec un maximum total de 3 images.
+          Tu peux mixer upload + URLs. Maximum total : {MAX} images.
         </p>
       </div>
 
@@ -109,7 +110,7 @@ export function ProductImagesInput() {
             Aucun aperçu pour le moment.
           </p>
         ) : (
-          <div className="mt-2 grid grid-cols-3 gap-2">
+          <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
             {previews.map((preview) => (
               <div
                 key={preview.key}

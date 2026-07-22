@@ -11,11 +11,11 @@ const { auth } = NextAuth(authConfig);
 
 // Routes soumises au rate limiting (hits par IP, fenêtre glissante 60 s)
 const RATE_LIMIT_RULES: { prefix: string; limit: number }[] = [
-  { prefix: "/api/auth", limit: 15 },
+  { prefix: "/api/auth", limit: 30 },
   { prefix: "/api/account/forgot-password", limit: 5 },
   { prefix: "/api/account/reset-password", limit: 5 },
   { prefix: "/api/account/register", limit: 10 },
-  { prefix: "/api/account/resend-verification", limit: 5 },
+  { prefix: "/api/account/resend-verificat?ion", limit: 5 },
   { prefix: "/api/checkout", limit: 30 },
   { prefix: "/api/contact", limit: 10 },
 ];

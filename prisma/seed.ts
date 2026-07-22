@@ -9,11 +9,17 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: env.ADMIN_BOOTSTRAP_EMAIL },
-    update: { password, role: "ADMIN" },
+    update: {
+      password,
+      role: "ADMIN",
+      emailVerifiedAt: new Date(),
+      deletedAt: null,
+    },
     create: {
       email: env.ADMIN_BOOTSTRAP_EMAIL,
       password,
       role: "ADMIN",
+      emailVerifiedAt: new Date(),
     },
   });
 

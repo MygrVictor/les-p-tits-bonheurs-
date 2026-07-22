@@ -1,11 +1,14 @@
 import Link from "next/link";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { updateProductStock, deleteProduct } from "@/app/(admin)/admin/actions";
 import { storefrontMainMenu } from "@/lib/menu";
 import { ConfirmSubmitButton } from "@/components/admin/confirm-submit-button";
 
 export const dynamic = "force-dynamic";
+
+const SEARCH_PAGE_SIZE = 20;
+const CATEGORY_PAGE_SIZE = 20;
 
 type AdminCategory = {
   id: string;
@@ -159,16 +162,19 @@ function ProductRows({ products }: Readonly<{ products: AdminProductRow[] }>) {
 export default async function AdminProductsPage({
   searchParams,
 }: Readonly<{
-  searchParams?: { categorie?: string; q?: string };
+  searchParams?: { categorie?: string; q?: string; page?: string };
 }>) {
   const selectedCategorySlug = searchParams?.categorie?.trim() || null;
   const query = searchParams?.q?.trim() ?? "";
+  const page = Math.max(1, parseInt(searchParams?.page ?? "1", 10));
 
-  const [products, categories] = await Promise.all([
+  const searchWhere = query
+    ? { name: { contains: query, mode: "insensitive" as const } }
+    : undefined;
+
+  const [products, searchTotal, categories, totalProducts] = await Promise.all([
     prisma.product.findMany({
-      where: query
-        ? { name: { contains: query, mode: "insensitive" } }
-        : undefined,
+      where: searchWhere,
       select: {
         id: true,
         name: true,
@@ -180,11 +186,23 @@ export default async function AdminProductsPage({
         _count: { select: { orderItems: true } },
       },
       orderBy: { name: "asc" },
+      ...(query
+        ? { take: SEARCH_PAGE_SIZE, skip: (page - 1) * SEARCH_PAGE_SIZE }
+        : { take: CATEGORY_PAGE_SIZE, skip: (page - 1) * CATEGORY_PAGE_SIZE }),
     }),
+    query ? prisma.product.count({ where: searchWhere }) : Promise.resolve(0),
     prisma.category.findMany({
       select: { id: true, name: true, slug: true, parentId: true },
     }),
+    !query ? prisma.product.count() : Promise.resolve(0),
   ]);
+
+  const totalSearchPages = query
+    ? Math.ceil(searchTotal / SEARCH_PAGE_SIZE)
+    : 1;
+  const totalCategoryPages = !query
+    ? Math.ceil(totalProducts / CATEGORY_PAGE_SIZE)
+    : 1;
 
   const productsByCategoryId = new Map<string, AdminProductRow[]>();
   for (const product of products) {
@@ -293,7 +311,7 @@ export default async function AdminProductsPage({
                 : "border-neutral-200 bg-white text-neutral-600 hover:border-primary hover:bg-neutral-50"
             }`}
           >
-            Toutes ({products.length})
+            Toutes ({query ? searchTotal : products.length})
           </Link>
           {rootCategories.map((root) => {
             const count = countForRoot(root);
@@ -315,13 +333,78 @@ export default async function AdminProductsPage({
         </div>
       </div>
 
-      {groups.length === 0 ? (
+      {query ? (
+        /* ── Vue recherche (paginée) ── */
+        <>
+          {products.length === 0 ? (
+            <div className="rounded-3xl bg-white p-10 text-center shadow-soft">
+              <p className="text-sm text-neutral-500">
+                Aucun produit ne correspond à &laquo; {query} &raquo;.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-3xl bg-white shadow-soft">
+              <div className="border-b border-neutral-100 px-5 py-3 text-sm text-neutral-500">
+                {searchTotal} résultat{searchTotal > 1 ? "s" : ""} pour &laquo;{" "}
+                {query} &raquo;
+                {totalSearchPages > 1 && (
+                  <span className="ml-2 text-neutral-400">
+                    — page {page} / {totalSearchPages}
+                  </span>
+                )}
+              </div>
+              <div className="overflow-x-auto">
+                <ProductRows products={products} />
+              </div>
+            </div>
+          )}
+          {totalSearchPages > 1 && (
+            <div className="flex items-center justify-between gap-4 rounded-3xl bg-white px-5 py-4 shadow-soft">
+              <p className="text-sm text-neutral-500">
+                Page {page} / {totalSearchPages}
+              </p>
+              <div className="flex items-center gap-2">
+                {page > 1 ? (
+                  <Link
+                    href={`/admin/produits?q=${encodeURIComponent(query)}&page=${page - 1}`}
+                    className="flex items-center gap-1 rounded-xl border border-neutral-200 px-3 py-1.5 text-sm font-medium hover:bg-neutral-50"
+                  >
+                    <ChevronLeft size={15} />
+                    Précédente
+                  </Link>
+                ) : (
+                  <span className="flex items-center gap-1 rounded-xl border border-neutral-100 px-3 py-1.5 text-sm font-medium text-neutral-300">
+                    <ChevronLeft size={15} />
+                    Précédente
+                  </span>
+                )}
+                {page < totalSearchPages ? (
+                  <Link
+                    href={`/admin/produits?q=${encodeURIComponent(query)}&page=${page + 1}`}
+                    className="flex items-center gap-1 rounded-xl border border-neutral-200 px-3 py-1.5 text-sm font-medium hover:bg-neutral-50"
+                  >
+                    Suivante
+                    <ChevronRight size={15} />
+                  </Link>
+                ) : (
+                  <span className="flex items-center gap-1 rounded-xl border border-neutral-100 px-3 py-1.5 text-sm font-medium text-neutral-300">
+                    Suivante
+                    <ChevronRight size={15} />
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </>
+      ) : groups.length === 0 ? (
+        /* ── Vue catégories : aucun produit ── */
         <div className="rounded-3xl bg-white p-10 text-center shadow-soft">
           <p className="text-sm text-neutral-500">
             Aucun produit ne correspond à ces filtres.
           </p>
         </div>
       ) : (
+        /* ── Vue catégories (groupée) ── */
         <div className="space-y-5">
           {groups.map(({ root, ownProducts, childGroups, total }) => (
             <details

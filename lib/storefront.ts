@@ -134,7 +134,33 @@ export async function getFeaturedStoreProducts(
 ): Promise<StorefrontProduct[]> {
   const dbProducts = await prisma.product.findMany({
     where: { status: "ACTIVE" },
-    include: { variants: true },
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      description: true,
+      price: true,
+      salePrice: true,
+      brandId: true,
+      categoryId: true,
+      images: true,
+      stock: true,
+      status: true,
+      isNew: true,
+      createdAt: true,
+      tags: true,
+      variants: {
+        select: {
+          id: true,
+          productId: true,
+          name: true,
+          value: true,
+          stock: true,
+          price: true,
+        },
+        take: 5,
+      },
+    },
     orderBy: [{ isNew: "desc" }, { updatedAt: "desc" }],
     take: limit,
   });
@@ -147,7 +173,33 @@ export async function getBentoStoreProducts(
 ): Promise<StorefrontProduct[]> {
   const dbProducts = await prisma.product.findMany({
     where: { status: "ACTIVE" },
-    include: { variants: true },
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      description: true,
+      price: true,
+      salePrice: true,
+      brandId: true,
+      categoryId: true,
+      images: true,
+      stock: true,
+      status: true,
+      isNew: true,
+      createdAt: true,
+      tags: true,
+      variants: {
+        select: {
+          id: true,
+          productId: true,
+          name: true,
+          value: true,
+          stock: true,
+          price: true,
+        },
+        take: 5,
+      },
+    },
     orderBy: [{ isNew: "desc" }, { createdAt: "desc" }],
     take: limit,
   });

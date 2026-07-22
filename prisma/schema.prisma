@@ -111,6 +111,9 @@ model Product {
   @@index([categoryId])
   @@index([status])
   @@index([color])
+  @@index([status, categoryId])
+  @@index([status, createdAt])
+  @@index([name])
 }
 
 model ProductVariant {

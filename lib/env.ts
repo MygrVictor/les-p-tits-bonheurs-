@@ -2,8 +2,13 @@ import { z } from "zod";
 
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
+  DIRECT_URL: z.string().min(1).optional(),
   NEXTAUTH_URL: z.string().url(),
   NEXTAUTH_SECRET: z.string().min(32),
+  AUTH_SECRET: z.string().min(32).optional(),
+  SUPABASE_URL: z.string().url().optional(),
+  SUPABASE_ANON_KEY: z.string().min(1).optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
   ADMIN_BOOTSTRAP_EMAIL: z.string().email(),
   ADMIN_BOOTSTRAP_PASSWORD: z.string().min(12),
   STRIPE_SECRET_KEY: z.string().startsWith("sk_"),
@@ -29,8 +34,13 @@ export function getEnv(): Env {
 
   cachedEnv = envSchema.parse({
     DATABASE_URL: process.env.DATABASE_URL,
+    DIRECT_URL: process.env.DIRECT_URL,
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+    AUTH_SECRET: process.env.AUTH_SECRET,
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     ADMIN_BOOTSTRAP_EMAIL: process.env.ADMIN_BOOTSTRAP_EMAIL,
     ADMIN_BOOTSTRAP_PASSWORD: process.env.ADMIN_BOOTSTRAP_PASSWORD,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,

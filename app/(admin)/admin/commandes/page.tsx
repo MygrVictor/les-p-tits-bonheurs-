@@ -1,9 +1,12 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { updateOrderStatus } from "@/app/(admin)/admin/actions";
 import { CARRIERS } from "@/lib/carriers";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+
+const PAGE_SIZE = 20;
 
 function formatCurrency(cents: number) {
   return `${(cents / 100).toFixed(2)} €`;
@@ -12,20 +15,38 @@ function formatCurrency(cents: number) {
 export default async function AdminOrdersPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ emailStatus?: string; order?: string }>;
+  searchParams?: Promise<{
+    emailStatus?: string;
+    order?: string;
+    page?: string;
+  }>;
 }) {
   const params = await searchParams;
-  const orders = await prisma.order.findMany({
-    include: {
-      user: { select: { email: true } },
-      items: { select: { quantity: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const page = Math.max(1, parseInt(params?.page ?? "1", 10));
+
+  const [orders, total] = await Promise.all([
+    prisma.order.findMany({
+      include: {
+        user: { select: { email: true } },
+        items: { select: { quantity: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: PAGE_SIZE,
+      skip: (page - 1) * PAGE_SIZE,
+    }),
+    prisma.order.count(),
+  ]);
+
+  const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
     <section className="space-y-6">
-      <h1 className="font-serif text-4xl text-ink">Commandes</h1>
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="font-serif text-4xl text-ink">Commandes</h1>
+        <span className="rounded-full bg-blush-100 px-3 py-1 text-sm font-semibold text-blush-700">
+          {total} au total
+        </span>
+      </div>
 
       {params?.emailStatus === "sent" && (
         <div className="flex items-center gap-2 rounded-2xl bg-green-50 px-4 py-3 text-sm text-green-700">
@@ -137,6 +158,44 @@ export default async function AdminOrdersPage({
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between gap-4 rounded-3xl bg-white px-5 py-4 shadow-soft">
+          <p className="text-sm text-neutral-500">
+            {total} commande{total > 1 ? "s" : ""} · page {page} / {totalPages}
+          </p>
+          <div className="flex items-center gap-2">
+            {page > 1 ? (
+              <Link
+                href={`/admin/commandes?page=${page - 1}`}
+                className="flex items-center gap-1 rounded-xl border border-neutral-200 px-3 py-1.5 text-sm font-medium hover:bg-neutral-50"
+              >
+                <ChevronLeft size={15} />
+                Précédente
+              </Link>
+            ) : (
+              <span className="flex items-center gap-1 rounded-xl border border-neutral-100 px-3 py-1.5 text-sm font-medium text-neutral-300">
+                <ChevronLeft size={15} />
+                Précédente
+              </span>
+            )}
+            {page < totalPages ? (
+              <Link
+                href={`/admin/commandes?page=${page + 1}`}
+                className="flex items-center gap-1 rounded-xl border border-neutral-200 px-3 py-1.5 text-sm font-medium hover:bg-neutral-50"
+              >
+                Suivante
+                <ChevronRight size={15} />
+              </Link>
+            ) : (
+              <span className="flex items-center gap-1 rounded-xl border border-neutral-100 px-3 py-1.5 text-sm font-medium text-neutral-300">
+                Suivante
+                <ChevronRight size={15} />
+              </span>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   );
 }

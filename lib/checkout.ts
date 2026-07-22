@@ -144,6 +144,10 @@ export async function finalizeCheckoutSession(
 
   const normalizedEmail = email.toLowerCase().trim();
   const shipping = session.shipping_details ?? null;
+  const metadataShippingName = session.metadata?.shippingName ?? null;
+  const metadataShippingAddress = session.metadata?.shippingAddress ?? null;
+  const metadataShippingPostalCode = session.metadata?.shippingPostalCode ?? null;
+  const metadataShippingCity = session.metadata?.shippingCity ?? null;
   const shippingAddress = shipping?.address
     ? [
         shipping.address.line1,
@@ -154,7 +158,16 @@ export async function finalizeCheckoutSession(
       ]
         .filter(Boolean)
         .join(", ")
-    : null;
+    : metadataShippingAddress
+      ? [
+          metadataShippingAddress,
+          metadataShippingPostalCode,
+          metadataShippingCity,
+          shipping?.address?.country ?? session.metadata?.shippingCountry,
+        ]
+          .filter(Boolean)
+          .join(", ")
+      : null;
   const stripeIntentId =
     typeof session.payment_intent === "string"
       ? session.payment_intent
@@ -184,7 +197,8 @@ export async function finalizeCheckoutSession(
           data: {
             email: normalizedEmail,
             password: randomPassword,
-            name: shipping?.name ?? session.customer_details?.name ?? null,
+            name:
+              shipping?.name ?? metadataShippingName ?? session.customer_details?.name ?? null,
             address: shippingAddress,
             role: "CLIENT",
             emailVerifiedAt: new Date(),
@@ -193,7 +207,20 @@ export async function finalizeCheckoutSession(
       } else if (!user.emailVerifiedAt) {
         user = await tx.user.update({
           where: { id: user.id },
-          data: { emailVerifiedAt: new Date() },
+          data: {
+            emailVerifiedAt: new Date(),
+            ...(shipping?.name || metadataShippingName
+              ? {
+                  name:
+                    shipping?.name ?? metadataShippingName ?? user.name ?? null,
+                }
+              : {}),
+            ...(shippingAddress
+              ? { address: shippingAddress }
+              : user.address
+                ? { address: user.address }
+                : {}),
+          },
         });
       }
 

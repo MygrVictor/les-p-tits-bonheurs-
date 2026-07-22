@@ -47,4 +47,12 @@ describe("getTrackingUrl", () => {
     const url = getTrackingUrl("ups", "AB 123 456");
     expect(url).toContain("AB%20123%20456");
   });
+
+  it("builds a URL for every carrier that supports tracking", () => {
+    for (const carrier of CARRIERS) {
+      if (!carrier.trackingUrl) continue;
+      const url = carrier.trackingUrl("TRACK 123");
+      expect(url).toContain("TRACK%20123");
+    }
+  });
 });

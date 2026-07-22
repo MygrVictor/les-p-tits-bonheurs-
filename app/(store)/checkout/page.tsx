@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { CheckoutGate } from "@/components/store/checkout-gate";
@@ -21,6 +21,17 @@ type ShippingForm = {
   country: string;
 };
 
+function splitFullName(value: string): { firstName: string; lastName: string } {
+  const trimmed = value.trim();
+  if (!trimmed) return { firstName: "", lastName: "" };
+  const parts = trimmed.split(/\s+/);
+  if (parts.length === 1) return { firstName: parts[0], lastName: "" };
+  return {
+    firstName: parts[0],
+    lastName: parts.slice(1).join(" "),
+  };
+}
+
 function CheckoutForm({ isGuest }: Readonly<{ isGuest: boolean }>) {
   const { data: session } = useSession();
   const items = useCartStore((s) => s.items);
@@ -38,12 +49,52 @@ function CheckoutForm({ isGuest }: Readonly<{ isGuest: boolean }>) {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const accountPrefilledRef = useRef(false);
 
   useEffect(() => {
     if (session?.user?.email) {
       setForm((f) => ({ ...f, email: session.user!.email ?? f.email }));
     }
   }, [session?.user?.email]);
+
+  useEffect(() => {
+    if (!session?.user?.email || accountPrefilledRef.current) return;
+
+    let cancelled = false;
+
+    const loadAccount = async () => {
+      try {
+        const response = await fetch("/api/account");
+        if (!response.ok) return;
+
+        const data = await response.json();
+        const user = data?.user;
+        if (cancelled || !user) return;
+
+        const fullName = String(user.name ?? session.user?.name ?? "");
+        const nameParts = splitFullName(fullName);
+
+        setForm((current) => ({
+          ...current,
+          firstName: current.firstName || nameParts.firstName,
+          lastName: current.lastName || nameParts.lastName,
+          email: current.email || user.email || session.user?.email || "",
+          address: current.address || user.address || "",
+          postalCode: current.postalCode || user.postalCode || "",
+          city: current.city || user.city || "",
+        }));
+        accountPrefilledRef.current = true;
+      } catch {
+        /* no-op */
+      }
+    };
+
+    void loadAccount();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.email, session?.user?.name]);
 
   const update =
     (field: keyof ShippingForm) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,7 +129,12 @@ function CheckoutForm({ isGuest }: Readonly<{ isGuest: boolean }>) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          firstName: form.firstName,
+          lastName: form.lastName,
           email: form.email,
+          address: form.address,
+          postalCode: form.postalCode,
+          city: form.city,
           shippingCountry: form.country,
           items: items.map((item) => ({
             productId: item.productId,

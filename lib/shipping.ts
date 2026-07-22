@@ -75,11 +75,27 @@ export const ALLOWED_SHIPPING_COUNTRIES: ShippingCountry[] = [
   "CA",
 ];
 
+/**
+ * Seuil de commande (en centimes) à partir duquel les frais de port
+ * standard sont offerts. Mettre à 0 pour désactiver.
+ * Ex: 5000 = 50 €
+ */
+export const FREE_SHIPPING_THRESHOLD_CENTS = 5000; // 50 €
+
 export function isShippingCountry(value: string): value is ShippingCountry {
   return (ALLOWED_SHIPPING_COUNTRIES as string[]).includes(value);
 }
 
-export function getShippingOptionsForCountry(country: ShippingCountry) {
+/**
+ * Retourne les options d'expédition Stripe pour un pays donné.
+ * Si `cartTotalCents` dépasse le seuil FREE_SHIPPING_THRESHOLD_CENTS,
+ * l'option standard est proposée à 0 € (frais offerts).
+ * L'option express reste toujours payante.
+ */
+export function getShippingOptionsForCountry(
+  country: ShippingCountry,
+  cartTotalCents = 0,
+) {
   const options =
     country === "FR"
       ? FRANCE_OPTIONS
@@ -87,20 +103,28 @@ export function getShippingOptionsForCountry(country: ShippingCountry) {
         ? NORTH_AMERICA_OPTIONS
         : EUROPE_OPTIONS;
 
-  return options.map((option) => ({
-    shipping_rate_data: {
-      display_name: option.label,
-      type: "fixed_amount" as const,
-      fixed_amount: {
-        amount: option.amount,
-        currency: "eur",
+  const freeShipping =
+    FREE_SHIPPING_THRESHOLD_CENTS > 0 &&
+    cartTotalCents >= FREE_SHIPPING_THRESHOLD_CENTS;
+
+  return options.map((option, index) => {
+    // Seule la première option (standard/économique) est offerte
+    const isFree = freeShipping && index === 0;
+    return {
+      shipping_rate_data: {
+        display_name: isFree ? `${option.label} — Offerts 🎁` : option.label,
+        type: "fixed_amount" as const,
+        fixed_amount: {
+          amount: isFree ? 0 : option.amount,
+          currency: "eur",
+        },
+        delivery_estimate: {
+          minimum: { unit: "business_day" as const, value: option.eta.minDays },
+          maximum: { unit: "business_day" as const, value: option.eta.maxDays },
+        },
       },
-      delivery_estimate: {
-        minimum: { unit: "business_day" as const, value: option.eta.minDays },
-        maximum: { unit: "business_day" as const, value: option.eta.maxDays },
-      },
-    },
-  }));
+    };
+  });
 }
 
 export function getShippingCountryLabel(country: ShippingCountry): string {

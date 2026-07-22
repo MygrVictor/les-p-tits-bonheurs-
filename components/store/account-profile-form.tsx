@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Loader2, Save, UserRound } from "lucide-react";
+import { parseProfileAddress } from "@/lib/address";
 
 type AccountProfileFormProps = {
   initialName?: string | null;
@@ -19,9 +20,12 @@ export function AccountProfileForm({
   initialAddress,
   compact = false,
 }: Readonly<AccountProfileFormProps>) {
+  const initialAddressParts = parseProfileAddress(initialAddress);
   const [name, setName] = useState(initialName ?? "");
   const [email, setEmail] = useState(initialEmail);
-  const [address, setAddress] = useState(initialAddress ?? "");
+  const [address, setAddress] = useState(initialAddressParts.address);
+  const [postalCode, setPostalCode] = useState(initialAddressParts.postalCode);
+  const [city, setCity] = useState(initialAddressParts.city);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
   const [saveError, setSaveError] = useState("");
@@ -35,15 +39,18 @@ export function AccountProfileForm({
       const res = await fetch("/api/account", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, address }),
+        body: JSON.stringify({ name, email, address, postalCode, city }),
       });
       const data = await res.json();
       if (!res.ok) {
         setSaveError(data.error ?? "Erreur lors de la mise à jour.");
       } else {
+        const savedAddress = parseProfileAddress(data.user?.address ?? "");
         setName(data.user?.name ?? "");
         setEmail(data.user?.email ?? email);
-        setAddress(data.user?.address ?? "");
+        setAddress(savedAddress.address);
+        setPostalCode(data.user?.postalCode ?? savedAddress.postalCode);
+        setCity(data.user?.city ?? savedAddress.city);
         setSaveMsg("Informations enregistrées !");
       }
     } catch {
@@ -112,6 +119,36 @@ export function AccountProfileForm({
             rows={compact ? 3 : 4}
             className={inputCls + " resize-none"}
           />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold uppercase tracking-wide text-neutral-500">
+              Code postal
+            </label>
+            <input
+              type="text"
+              autoComplete="postal-code"
+              placeholder="75001"
+              value={postalCode}
+              onChange={(e) => setPostalCode(e.target.value)}
+              className={inputCls}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold uppercase tracking-wide text-neutral-500">
+              Ville
+            </label>
+            <input
+              type="text"
+              autoComplete="address-level2"
+              placeholder="Paris"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className={inputCls}
+            />
+          </div>
         </div>
 
         {saveError && (

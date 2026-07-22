@@ -1,5 +1,6 @@
 import { FeaturedGrid } from "@/components/store/featured-grid";
 import { NewBrandsCarousel } from "@/components/store/new-brands-carousel";
+import { NewProductsSection } from "@/components/store/new-products-section";
 import { CategoryDiscoveryBento } from "@/components/store/category-discovery-bento";
 import { BentoBoutique } from "@/components/store/bento-boutique";
 
@@ -10,6 +11,7 @@ export default function StoreHomePage() {
     <div className="space-y-8">
       <NewBrandsCarousel />
       <CategoryDiscoveryBento />
+      <NewProductsSection />
       <FeaturedGrid />
       <BentoBoutique />
     </div>

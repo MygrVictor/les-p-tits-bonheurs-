@@ -57,7 +57,7 @@ export function NewProductsCarousel({
           return (
             <article
               key={product.id}
-              className="group w-[220px] shrink-0 overflow-hidden rounded-2xl border border-neutral-200/70 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg sm:w-[240px]"
+              className="group w-[72vw] max-w-[240px] shrink-0 overflow-hidden rounded-2xl border border-neutral-200/70 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg sm:w-[240px]"
             >
               <Link href={`/produit/${product.id}`} className="block">
                 <div className="relative aspect-square overflow-hidden bg-blush-50">

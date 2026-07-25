@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { SlidersHorizontal, X } from "lucide-react";
 
 export type FilterOption = {
   id: string;
@@ -86,6 +87,8 @@ export function CategoryFilters({
   availableMaxPrice: number | null;
   brandOptions: { id: string; name: string }[];
 }>) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+
   const minBound = availableMinPrice ?? MIN_PRICE_EUR;
   const maxBound = availableMaxPrice ?? MAX_PRICE_EUR;
   const hasPriceBounds =
@@ -142,8 +145,8 @@ export function CategoryFilters({
     ([key]) => key !== "page",
   );
 
-  return (
-    <div className="sticky top-20 space-y-5 rounded-2xl border border-neutral-100 bg-white p-5 shadow-soft">
+  const filterPanel = (
+    <div className="space-y-5 rounded-2xl border border-neutral-100 bg-white p-5 shadow-soft lg:sticky lg:top-20">
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">
           Filtrer
@@ -175,6 +178,7 @@ export function CategoryFilters({
                     href={buildHref(categoryHref, nextParams, selectedBrands)}
                     title={option.label}
                     aria-label={option.label}
+                    onClick={() => setMobileOpen(false)}
                     className="group/swatch flex flex-col items-center gap-1.5"
                   >
                     <span
@@ -211,6 +215,7 @@ export function CategoryFilters({
                   <Link
                     key={option.id}
                     href={buildHref(categoryHref, nextParams, selectedBrands)}
+                    onClick={() => setMobileOpen(false)}
                     className={`block rounded-lg border px-3 py-2 text-sm font-semibold transition ${
                       active
                         ? "border-primary bg-primary/15 text-ink ring-1 ring-primary/20"
@@ -242,6 +247,7 @@ export function CategoryFilters({
                 <Link
                   key={brand.id}
                   href={buildHref(categoryHref, baseParams, nextBrands)}
+                  onClick={() => setMobileOpen(false)}
                   className={`block rounded-lg border px-3 py-2 text-sm font-semibold transition ${
                     active
                       ? "border-primary bg-primary/15 text-ink ring-1 ring-primary/20"
@@ -334,6 +340,7 @@ export function CategoryFilters({
                   { ...baseParams, prixMin: null, prixMax: null },
                   selectedBrands,
                 )}
+                onClick={() => setMobileOpen(false)}
                 className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-600 transition hover:border-primary hover:text-ink"
               >
                 Supprimer le prix
@@ -346,11 +353,52 @@ export function CategoryFilters({
       <div className="flex justify-end">
         <Link
           href={resetHref}
+          onClick={() => setMobileOpen(false)}
           className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-semibold text-neutral-600 transition hover:border-primary hover:text-ink"
         >
           Réinitialiser les filtres
         </Link>
       </div>
     </div>
+  );
+
+  return (
+    <>
+      <div className="lg:hidden">
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-ink shadow-soft"
+        >
+          <SlidersHorizontal size={16} />
+          Filtres
+        </button>
+      </div>
+
+      {mobileOpen && (
+        <div className="fixed inset-0 z-[120] lg:hidden">
+          <div
+            className="absolute inset-0 bg-ink/45"
+            onClick={() => setMobileOpen(false)}
+          />
+          <div className="absolute inset-y-0 right-0 w-[86vw] max-w-sm overflow-y-auto bg-white p-4 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <p className="font-serif text-lg text-ink">Filtres</p>
+              <button
+                type="button"
+                aria-label="Fermer les filtres"
+                onClick={() => setMobileOpen(false)}
+                className="rounded-full p-2 text-neutral-600 hover:bg-neutral-100"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            {filterPanel}
+          </div>
+        </div>
+      )}
+
+      <div className="hidden lg:block">{filterPanel}</div>
+    </>
   );
 }

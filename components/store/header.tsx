@@ -60,6 +60,14 @@ export function StoreHeader() {
             <Menu size={20} />
           </button>
 
+          {/* Logo compact — mobile */}
+          <Link
+            href="/"
+            className="truncate font-brand text-base font-bold text-white lg:hidden"
+          >
+            Les P&apos;tits Bonheurs
+          </Link>
+
           {/* Barre de recherche — gauche, desktop */}
           <div className="hidden lg:block lg:w-64 xl:w-80">
             <div className="relative">
@@ -78,7 +86,7 @@ export function StoreHeader() {
           </div>
 
           {/* Spacer */}
-          <div className="flex-1" />
+          <div className="flex-1 lg:flex-none" />
 
           {/* Logo texte — droite, desktop */}
           <Link
@@ -103,19 +111,34 @@ export function StoreHeader() {
               )}
             </button>
             {session?.user ? (
-              <button
-                onClick={() => {
-                  if (isAdmin) {
-                    router.push("/admin");
-                    return;
-                  }
-                  setAccountOpen(true);
-                }}
-                className="rounded-full bg-white/25 px-4 py-2.5 text-white shadow-sm hover:bg-white/35 transition text-sm font-semibold"
-                aria-label={isAdmin ? "Tableau de bord admin" : "Mon compte"}
-              >
-                {session.user.name || session.user.email?.split("@")[0]}
-              </button>
+              <>
+                <button
+                  onClick={() => {
+                    if (isAdmin) {
+                      router.push("/admin");
+                      return;
+                    }
+                    setAccountOpen(true);
+                  }}
+                  className="rounded-full bg-white/25 p-2.5 text-white shadow-sm hover:bg-white/35 transition sm:hidden"
+                  aria-label={isAdmin ? "Tableau de bord admin" : "Mon compte"}
+                >
+                  <UserRound size={20} />
+                </button>
+                <button
+                  onClick={() => {
+                    if (isAdmin) {
+                      router.push("/admin");
+                      return;
+                    }
+                    setAccountOpen(true);
+                  }}
+                  className="hidden max-w-[11rem] truncate rounded-full bg-white/25 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-white/35 sm:block"
+                  aria-label={isAdmin ? "Tableau de bord admin" : "Mon compte"}
+                >
+                  {session.user.name || session.user.email?.split("@")[0]}
+                </button>
+              </>
             ) : (
               <Link
                 href="/compte"

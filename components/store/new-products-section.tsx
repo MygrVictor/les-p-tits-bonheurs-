@@ -68,7 +68,7 @@ export async function NewProductsSection() {
           Voir tout
         </Link>
       </div>
-      <div className="px-4 sm:px-6">
+      <div className="px-0">
         <NewProductsCarousel products={products} />
       </div>
     </section>

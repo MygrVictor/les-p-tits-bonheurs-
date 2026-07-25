@@ -44,14 +44,14 @@ export function BentoBoutique() {
           </div>
         </div>
 
-        <div className="flex flex-col justify-between rounded-[2rem] border border-primary/15 bg-[#fff5f8] p-7 sm:p-8">
+        <div className="flex flex-col justify-between rounded-[2rem] border border-primary/15 bg-[#fff5f8] p-5 sm:p-8">
           <div className="space-y-4">
             <Sparkles size={18} className="text-primary" />
             <div className="space-y-3">
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary/80">
                 Présentation
               </p>
-              <p className="font-serif text-2xl leading-snug text-ink sm:text-3xl">
+              <p className="font-serif text-xl leading-snug text-ink sm:text-3xl">
                 Une boutique douce, colorée et pensée pour faire plaisir.
               </p>
               <p className="text-sm leading-7 text-neutral-600">

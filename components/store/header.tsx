@@ -86,7 +86,7 @@ export function StoreHeader() {
           </div>
 
           {/* Spacer */}
-          <div className="flex-1 lg:flex-none" />
+          <div className="flex-1" />
 
           {/* Logo texte — droite, desktop */}
           <Link

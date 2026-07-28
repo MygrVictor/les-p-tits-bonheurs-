@@ -25,7 +25,7 @@ export function BentoBoutique() {
         <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <div className="relative col-span-1 aspect-[4/5] overflow-hidden rounded-[2rem] bg-blush-50">
             <Image
-              src="/atelier.jpg"
+              src="/boutique_2.jpg"
               alt="L'atelier"
               fill
               className="object-cover transition duration-700 hover:scale-105"
@@ -35,7 +35,7 @@ export function BentoBoutique() {
 
           <div className="relative col-span-1 aspect-[4/5] overflow-hidden rounded-[2rem] bg-blush-50 sm:mt-10">
             <Image
-              src="/hero.jpg"
+              src="/boutique_1.jpg"
               alt="La boutique"
               fill
               className="object-cover transition duration-700 hover:scale-105"

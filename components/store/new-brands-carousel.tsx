@@ -7,7 +7,10 @@ import { SafeImage } from "@/components/ui/image";
 import { newBrands, type NewBrand } from "@/lib/new-brands";
 
 /** Une slide = les 3 photos d'UNE marque, collées côte à côte (sans gap, angles carrés). */
-function BrandSlidePhotos({ brand }: Readonly<{ brand: NewBrand }>) {
+function BrandSlidePhotos({
+  brand,
+  brandIndex,
+}: Readonly<{ brand: NewBrand; brandIndex: number }>) {
   const photos = brand.images.slice(0, 3);
 
   return (
@@ -23,7 +26,7 @@ function BrandSlidePhotos({ brand }: Readonly<{ brand: NewBrand }>) {
             fill
             className="object-cover"
             sizes="(max-width: 640px) 33vw, 25vw"
-            priority={i === 0}
+            priority={brandIndex === 0 && i === 0}
           />
         </div>
       ))}
@@ -81,8 +84,8 @@ export function NewBrandsCarousel() {
           ref={scrollRef}
           className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto scroll-smooth"
         >
-          {newBrands.map((brand) => (
-            <BrandSlidePhotos key={brand.id} brand={brand} />
+          {newBrands.map((brand, index) => (
+            <BrandSlidePhotos key={brand.id} brand={brand} brandIndex={index} />
           ))}
         </div>
 

@@ -36,6 +36,15 @@ export default async function NewProductPage({
       <form
         action={createProduct}
         className="grid gap-4 rounded-3xl bg-white p-6 shadow-soft md:grid-cols-2"
+        onSubmit={(e) => {
+          const btn = (e.target as HTMLFormElement).querySelector(
+            'button[type="submit"]',
+          );
+          if (btn) {
+            btn.setAttribute("disabled", "true");
+            btn.textContent = "Création en cours...";
+          }
+        }}
       >
         <div className="md:col-span-2">
           <label className="text-sm text-neutral-600">Nom</label>
@@ -192,7 +201,7 @@ export default async function NewProductPage({
         <div className="md:col-span-2">
           <button
             type="submit"
-            className="rounded-xl bg-primary px-4 py-2 font-semibold text-white hover:bg-primary-hover"
+            className="rounded-xl bg-primary px-4 py-2 font-semibold text-white hover:bg-primary-hover disabled:opacity-75 disabled:cursor-not-allowed"
           >
             Créer le produit
           </button>

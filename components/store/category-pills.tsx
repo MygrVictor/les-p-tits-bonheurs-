@@ -24,7 +24,7 @@ export function CategoryPills() {
           {categories.map((category) => (
             <div
               key={category.label}
-              className="group relative z-0 shrink-0 hover:z-[110] focus-within:z-[110]"
+              className="group relative z-0 shrink-0 hover:z-[110]"
             >
               <Link
                 href={category.href}
@@ -34,7 +34,7 @@ export function CategoryPills() {
               </Link>
 
               {category.sections?.length ? (
-                <div className="pointer-events-none invisible absolute left-0 top-full z-[120] mt-0 w-[min(90vw,44rem)] translate-y-1 rounded-2xl border border-blush-200 bg-blush-100 p-4 opacity-0 shadow-xl transition-all duration-150 group-hover:pointer-events-auto group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                <div className="pointer-events-none invisible absolute left-0 top-full z-[120] mt-0 w-[min(90vw,44rem)] translate-y-1 rounded-2xl border border-blush-200 bg-blush-100 p-4 opacity-0 shadow-xl transition-all duration-150 group-hover:pointer-events-auto group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
                   <div className="grid gap-4 sm:grid-cols-2">
                     {category.sections.map((section) => {
                       const sectionLinks = getUniqueLinks(section.links);

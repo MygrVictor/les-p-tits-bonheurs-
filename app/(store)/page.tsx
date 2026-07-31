@@ -4,7 +4,7 @@ import { NewProductsSection } from "@/components/store/new-products-section";
 import { CategoryDiscoveryBento } from "@/components/store/category-discovery-bento";
 import { BentoBoutique } from "@/components/store/bento-boutique";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export default function StoreHomePage() {
   return (

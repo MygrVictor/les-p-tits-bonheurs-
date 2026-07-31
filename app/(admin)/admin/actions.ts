@@ -57,12 +57,8 @@ async function uploadProductImage(file: File): Promise<string | null> {
           {
             folder: "les-ptits-bonheurs/products",
             resource_type: "image",
-            // Limite la taille stockée : les photos de smartphone (souvent
-            // 10-12 Mpx) sont inutilement lourdes pour une fiche produit.
-            // "limit" ne fait que réduire (jamais agrandir) en conservant le
-            // ratio, ce qui économise du stockage et de la bande passante
-            // Cloudinary sans perte de qualité perceptible sur le site.
-            transformation: [{ width: 2000, height: 2000, crop: "limit" }],
+            // Upload brut pour accélérer la création produit.
+            // Les optimisations d'affichage sont gérées au rendu.
           },
           (error, result) => {
             if (error || !result) {
@@ -389,8 +385,7 @@ export async function createProduct(formData: FormData) {
 
   revalidatePath("/admin/produits");
   revalidatePath(`/produit/${createdProduct.slug}`);
-  revalidatePath("/");
-  redirect(`/admin/produits/${createdProduct.id}/modifier`);
+  redirect(`/produit/${createdProduct.slug}`);
 }
 
 export async function updateProductStock(

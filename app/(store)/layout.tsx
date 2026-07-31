@@ -16,7 +16,7 @@ export default function StoreLayout({
       <div className="pointer-events-none absolute -left-20 top-40 -z-10 h-64 w-64 rounded-full bg-[#f7d8e1]/40 blur-3xl" />
       <div className="pointer-events-none absolute -right-16 top-[26rem] -z-10 h-72 w-72 rounded-full bg-[#fdecef]/70 blur-3xl" />
       <StoreHeader />
-      <div className="relative z-[80] hidden overflow-visible border-b border-neutral-100/80 bg-white/80 px-4 py-4 backdrop-blur-sm lg:block lg:px-8 xl:px-10">
+      <div className="sticky top-[68px] z-40 hidden overflow-visible border-b border-neutral-100/80 bg-white/90 px-4 py-4 backdrop-blur-sm lg:block lg:px-8 xl:px-10">
         <div className="mx-auto max-w-[1440px]">
           <CategoryPills />
         </div>

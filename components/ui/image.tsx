@@ -23,7 +23,7 @@ function optimizeImageSrc(src: ImageProps["src"]): ImageProps["src"] {
       const uploadIndex = parts.indexOf("upload");
 
       if (uploadIndex !== -1) {
-        parts.splice(uploadIndex + 1, 0, "f_auto,q_auto,w_1200");
+        parts.splice(uploadIndex + 1, 0, "f_auto,q_auto,dpr_auto,c_limit");
         url.pathname = parts.join("/");
       }
 

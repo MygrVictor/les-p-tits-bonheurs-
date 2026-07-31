@@ -1,6 +1,5 @@
-import Link from "next/link";
-import { SafeImage } from "@/components/ui/image";
 import { prisma } from "@/lib/prisma";
+import { CategoryBentoTile } from "./category-bento-tile";
 
 /**
  * Bento « Nos univers » — 6 tuiles carrées, une par grande famille du menu
@@ -117,6 +116,8 @@ export async function CategoryDiscoveryBento() {
     new Set(Array.from(categoryIdsBySlug.values()).flat()),
   );
 
+  const MAX_IMAGES_PER_TILE = 6;
+
   const products =
     allCategoryIds.length > 0
       ? await prisma.product.findMany({
@@ -131,16 +132,28 @@ export async function CategoryDiscoveryBento() {
     const candidates = products.filter((p) =>
       categoryIds.includes(p.categoryId),
     );
-    const keywordMatch = highlight.nameKeyword
-      ? candidates.find((p) =>
+
+    // Mettre en premier les produits dont le nom correspond au mot-clé
+    const keywordMatches = highlight.nameKeyword
+      ? candidates.filter((p) =>
           p.name.toLowerCase().includes(highlight.nameKeyword!.toLowerCase()),
         )
-      : undefined;
-    const chosen = keywordMatch ?? candidates[0];
-    const chosenImages = chosen ? toStringArray(chosen.images) : [];
-    const image = chosenImages[0] || highlight.fallbackImage;
+      : [];
+    const others = candidates.filter((p) => !keywordMatches.includes(p));
+    const ordered = [...keywordMatches, ...others];
 
-    return { ...highlight, image };
+    // Collecter jusqu'à MAX_IMAGES_PER_TILE images uniques
+    const images: string[] = [];
+    for (const product of ordered) {
+      for (const img of toStringArray(product.images)) {
+        if (!images.includes(img)) images.push(img);
+        if (images.length >= MAX_IMAGES_PER_TILE) break;
+      }
+      if (images.length >= MAX_IMAGES_PER_TILE) break;
+    }
+    if (images.length === 0) images.push(highlight.fallbackImage);
+
+    return { ...highlight, images };
   });
 
   return (
@@ -156,28 +169,13 @@ export async function CategoryDiscoveryBento() {
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
         {tiles.map((tile) => (
-          <Link
+          <CategoryBentoTile
             key={tile.key}
             href={tile.href}
-            className="group relative aspect-square overflow-hidden border border-black/5 bg-neutral-100 shadow-soft"
-          >
-            <SafeImage
-              src={tile.image}
-              alt={tile.title}
-              fill
-              className="object-cover transition duration-700 ease-out group-hover:scale-105"
-              sizes="(max-width: 640px) 50vw, 33vw"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-            <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-white/70">
-                {tile.family}
-              </p>
-              <p className="font-serif text-lg text-white sm:text-xl">
-                {tile.title}
-              </p>
-            </div>
-          </Link>
+            family={tile.family}
+            title={tile.title}
+            images={tile.images}
+          />
         ))}
       </div>
     </section>

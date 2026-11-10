@@ -249,9 +249,22 @@ async function loadSiteCategories(): Promise<SiteCategories> {
   return { byName, bySlug };
 }
 
+function typeKeywordsFor(segment: string): string[] {
+  const s = slugify(segment);
+  if (s === "bracelets") return ["bracelet"];
+  if (s === "colliers") return ["collier"];
+  if (s === "boucles-d-oreilles") return ["boucles", "oreille"];
+  if (s === "bagues") return ["bague"];
+  if (s === "boites-a-bijoux") return ["boite", "ecrin"];
+  if (s === "chevillieres") return ["chevillere"];
+  if (s === "ear-cuff") return ["ear cuff", "ear", "cuff"];
+  if (s === "perles") return ["perle"];
+  return [];
+}
+
 function typeTag(label: string | undefined): string[] {
-  if (!label || !/[>/]/.test(label)) return [];
-  return [lastSegment(label)];
+  if (!label) return [];
+  return typeKeywordsFor(lastSegment(label));
 }
 
 function lastSegment(label: string): string {

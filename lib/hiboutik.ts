@@ -301,6 +301,18 @@ export async function syncStockFromHiboutik(): Promise<HiboutikSyncReport> {
 
   const created = await createMissingProducts(products, stockById);
 
+  // Hiboutik ne renvoie pas de niveaux de stock pour ce compte/warehouse =>
+  // on ne doit pas écraser les stocks du site à 0 en l'absence de donnée.
+  if (!Array.isArray(stockRows) || stockRows.length === 0) {
+    return {
+      hiboutikProducts: products.length,
+      created,
+      matched: 0,
+      updated: 0,
+      unmatchedSiteSkus: [],
+    };
+  }
+
   const siteProducts = await prisma.product.findMany({
     where: { sku: { not: null } },
     select: { id: true, sku: true, stock: true },

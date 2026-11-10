@@ -9,7 +9,7 @@ import { HiboutikSyncButton } from "@/components/admin/hiboutik-sync-button";
 export const dynamic = "force-dynamic";
 
 const SEARCH_PAGE_SIZE = 20;
-const CATEGORY_PAGE_SIZE = 20;
+const CATEGORY_PAGE_SIZE = 500;
 
 type AdminCategory = {
   id: string;
@@ -315,7 +315,7 @@ export default async function AdminProductsPage({
                 : "border-neutral-200 bg-white text-neutral-600 hover:border-primary hover:bg-neutral-50"
             }`}
           >
-            Toutes ({query ? searchTotal : products.length})
+            Toutes ({query ? searchTotal : totalProducts})
           </Link>
           {rootCategories.map((root) => {
             const count = countForRoot(root);

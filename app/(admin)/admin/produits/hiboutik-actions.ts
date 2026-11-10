@@ -24,7 +24,7 @@ export async function syncHiboutikAction(
       : "";
     return {
       ok: true,
-      message: `${r.created} nouveaux produits créés (en brouillon), ${r.matched} produits liés, ${r.updated} stocks mis à jour, ${r.imagesImported} produits avec photos importées${r.imagesRemaining > 0 ? ` (${r.imagesRemaining} restants : relance la synchro)` : ""}${missing}.`,
+      message: `${r.created} nouveaux produits créés (en brouillon), ${r.matched} produits liés, ${r.recategorized} produits re-classés dans les bonnes catégories, ${r.updated} stocks mis à jour, ${r.imagesImported} produits avec photos importées${r.imagesRemaining > 0 ? ` (${r.imagesRemaining} restants : relance la synchro)` : ""}${missing}.`,
     };
   } catch (error) {
     console.error(error);

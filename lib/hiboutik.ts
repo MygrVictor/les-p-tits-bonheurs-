@@ -24,6 +24,7 @@ type HiboutikProduct = {
   product_supplier_reference?: string;
   product_price?: string;
   product_desc?: string;
+  product_category?: number;
   product_stock_management?: number;
   product_arch?: number;
 };
@@ -111,6 +112,7 @@ export type HiboutikSyncReport = {
   unmatchedSiteSkus: string[];
   imagesImported: number;
   imagesRemaining: number;
+  recategorized: number;
 };
 
 /** Clé de liaison site ↔ caisse : code-barres, sinon réf. fournisseur, sinon id Hiboutik. */
@@ -196,6 +198,98 @@ async function ensureCategory(name: string): Promise<string> {
 }
 
 /**
+ * Les catégories Hiboutik sont à plat (BRACELETS, COLLIERS…) alors que le
+ * site les range dans son arborescence (Bijouterie > Acier inoxydable / Plaqué Or,
+ * Perlerie…). On traduit donc vers le slug de la catégorie du site.
+ * Bijoux : « plaqué » dans le nom → Plaqué Or, « acier » → Acier inoxydable,
+ * sinon Bijouterie. Le filtre « Type » du site repère ensuite bracelet/collier… par le nom.
+ */
+const JEWELRY_CATEGORY_SLUGS = new Set([
+  "boucles-d-oreilles",
+  "bracelets",
+  "colliers",
+  "chevillieres",
+  "ear-cuff",
+]);
+
+/** Slugs des catégories à plat créées automatiquement par la synchro (à reclasser). */
+const FLAT_CATEGORY_SLUGS = [...JEWELRY_CATEGORY_SLUGS, "perles"];
+
+function siteCategorySlugFor(
+  hiboutikCategory: string,
+  productName: string,
+): string | null {
+  const cat = slugify(hiboutikCategory);
+  if (JEWELRY_CATEGORY_SLUGS.has(cat)) {
+    const name = slugify(productName);
+    if (name.includes("plaque")) return "bijouterie-plaque-or";
+    if (name.includes("acier")) return "bijouterie-acier-inoxydable";
+    return "bijouterie";
+  }
+  if (cat === "perles") return "perlerie";
+  return null;
+}
+
+async function resolveSiteCategoryId(
+  hiboutikCategory: string,
+  productName: string,
+  cache: Map<string, string | null>,
+): Promise<string | null> {
+  const slug = siteCategorySlugFor(hiboutikCategory, productName);
+  if (!slug) return null;
+  if (!cache.has(slug)) {
+    const found = await prisma.category.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
+    cache.set(slug, found?.id ?? null);
+  }
+  return cache.get(slug) ?? null;
+}
+
+/**
+ * Range dans l'arborescence du site les produits restés dans une catégorie à plat
+ * créée par une synchro précédente. Les produits que la cliente a déjà rangés
+ * ailleurs ne sont pas touchés.
+ */
+async function reclassifyProducts(
+  byKey: Map<string, HiboutikProduct>,
+): Promise<number> {
+  const flat = await prisma.product.findMany({
+    where: {
+      sku: { not: null },
+      category: { slug: { in: FLAT_CATEGORY_SLUGS } },
+    },
+    select: { id: true, sku: true, name: true, categoryId: true },
+  });
+  if (flat.length === 0) return 0;
+
+  const categoryNames = await loadNames("/categories", "category");
+  const cache = new Map<string, string | null>();
+  let moved = 0;
+
+  for (const sp of flat) {
+    const hp = byKey.get(norm(sp.sku));
+    if (!hp) continue;
+    const hiboutikCategory = categoryNames.get(Number(hp.product_category));
+    if (!hiboutikCategory) continue;
+    const targetId = await resolveSiteCategoryId(
+      hiboutikCategory,
+      sp.name,
+      cache,
+    );
+    if (targetId && targetId !== sp.categoryId) {
+      await prisma.product.update({
+        where: { id: sp.id },
+        data: { categoryId: targetId },
+      });
+      moved++;
+    }
+  }
+  return moved;
+}
+
+/**
  * Crée sur le site les produits saisis dans Hiboutik qui n'y existent pas encore.
  * Créés en BROUILLON (DRAFT) : la cliente vérifie puis publie.
  * Marque / catégorie reprises de Hiboutik (créées si besoin), sinon « À classer ».
@@ -227,6 +321,7 @@ async function createMissingProducts(
   ]);
 
   let created = 0;
+  const categoryCache = new Map<string, string | null>();
   for (const p of toCreate) {
     const details = await getHiboutikProductDetails(p.product_id);
     const source = details ?? p;
@@ -238,9 +333,11 @@ async function createMissingProducts(
     const brandId = await ensureBrand(
       brandNames.get(Number(raw.product_brand)) ?? "Les P'tits Bonheurs",
     );
-    const categoryId = await ensureCategory(
-      categoryNames.get(Number(raw.product_category)) ?? "À classer",
-    );
+    const hiboutikCategory = categoryNames.get(Number(raw.product_category));
+    const categoryId =
+      (hiboutikCategory
+        ? await resolveSiteCategoryId(hiboutikCategory, name, categoryCache)
+        : null) ?? (await ensureCategory(hiboutikCategory ?? "À classer"));
     const price = Math.round((Number(p.product_price) || 0) * 100);
     const discount = Math.round(
       (Number(raw.product_discount_price) || 0) * 100,
@@ -404,6 +501,7 @@ export async function syncStockFromHiboutik(
   }
 
   const created = await createMissingProducts(products, stockById);
+  const recategorized = await reclassifyProducts(byKey);
 
   // Hiboutik ne renvoie pas de niveaux de stock pour ce compte/warehouse =>
   // on ne doit pas écraser les stocks du site à 0 en l'absence de donnée.
@@ -446,6 +544,7 @@ export async function syncStockFromHiboutik(
     unmatchedSiteSkus,
     imagesImported: images.imported,
     imagesRemaining: images.remaining,
+    recategorized,
   };
 }
 

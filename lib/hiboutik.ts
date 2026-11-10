@@ -162,10 +162,23 @@ async function loadNames(
   const map = new Map<number, string>();
   try {
     const rows = await hiboutik<NamedRow[]>(path);
+    const own = new Map<number, string>();
+    const parentOf = new Map<number, number>();
     for (const r of rows ?? []) {
       const id = Number(r[`${prefix}_id`]);
       const name = String(r[`${prefix}_name`] ?? "").trim();
-      if (id && name) map.set(id, name);
+      if (!id || !name) continue;
+      own.set(id, name);
+      parentOf.set(id, Number(r[`${prefix}_id_parent`]) || 0);
+    }
+    for (const [id, name] of own) {
+      const parts = [name];
+      let p = parentOf.get(id) ?? 0;
+      for (let i = 0; p && own.has(p) && i < 5; i++) {
+        parts.unshift(own.get(p)!);
+        p = parentOf.get(p) ?? 0;
+      }
+      map.set(id, parts.join(" > "));
     }
   } catch (error) {
     console.warn(`[hiboutik] ${path} indisponible:`, error);
@@ -236,6 +249,11 @@ async function loadSiteCategories(): Promise<SiteCategories> {
   return { byName, bySlug };
 }
 
+function typeTag(label: string | undefined): string[] {
+  if (!label || !/[>/]/.test(label)) return [];
+  return [lastSegment(label)];
+}
+
 function lastSegment(label: string): string {
   const parts = label
     .split(/[>/]/)
@@ -274,6 +292,14 @@ function resolveSiteCategory(
   productName: string,
   site: SiteCategories,
 ): { id: string | null; direct: boolean } {
+  const parts = hiboutikCategory
+    .split(/[>/]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (parts.length >= 2) {
+    const parent = site.byName.get(slugify(parts[parts.length - 2]));
+    if (parent) return { id: parent, direct: true };
+  }
   const direct = site.byName.get(slugify(lastSegment(hiboutikCategory)));
   if (direct) return { id: direct, direct: true };
   const slug = legacySlugFor(hiboutikCategory, productName);
@@ -298,6 +324,7 @@ async function reclassifyProducts(
         sku: true,
         name: true,
         categoryId: true,
+        tags: true,
         category: { select: { slug: true } },
       },
     }),
@@ -320,12 +347,19 @@ async function reclassifyProducts(
       continue;
     }
     const allowed = direct || LEGACY_FLAT_SLUGS.has(sp.category.slug);
-    if (allowed && id !== sp.categoryId) {
+    const currentTags = Array.isArray(sp.tags) ? (sp.tags as string[]) : [];
+    const wanted = typeTag(hiboutikCategory).filter(
+      (t) => !currentTags.includes(t),
+    );
+    if (allowed && (id !== sp.categoryId || wanted.length > 0)) {
       await prisma.product.update({
         where: { id: sp.id },
-        data: { categoryId: id },
+        data: {
+          categoryId: id,
+          ...(wanted.length ? { tags: [...currentTags, ...wanted] } : {}),
+        },
       });
-      moved++;
+      if (id !== sp.categoryId) moved++;
     }
   }
   return { moved, unmapped: [...unmapped].sort() };
@@ -400,7 +434,7 @@ async function createMissingProducts(
           isNew: true,
           brandId,
           categoryId,
-          tags: ["hiboutik"],
+          tags: ["hiboutik", ...typeTag(hiboutikCategory)],
         },
       });
       existing.add(sku);

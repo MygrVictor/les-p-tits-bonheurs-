@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { updateProductStock, deleteProduct } from "@/app/(admin)/admin/actions";
+import {
+  updateProductStock,
+  deleteProduct,
+  toggleProductDraftStatus,
+} from "@/app/(admin)/admin/actions";
 import { storefrontMainMenu } from "@/lib/menu";
 import { ConfirmSubmitButton } from "@/components/admin/confirm-submit-button";
 import { HiboutikSyncButton } from "@/components/admin/hiboutik-sync-button";

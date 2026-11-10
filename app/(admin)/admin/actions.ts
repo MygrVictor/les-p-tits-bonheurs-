@@ -409,33 +409,41 @@ export async function updateProductStock(
   revalidatePath("/admin/produits");
 }
 
-export async function toggleProductDraftStatus(
-  productId: string,
-  formData: FormData,
-) {
+/**
+ * Enregistrement groupé des statuts depuis la liste produits :
+ * case cochée = brouillon (DRAFT), case décochée = actif (ACTIVE).
+ * `allIds` = tous les produits affichés, `draft` = ceux qui sont cochés.
+ */
+export async function saveProductStatuses(formData: FormData) {
   await ensureAdmin();
 
-  if (!productId) return;
+  const allIds = formData
+    .getAll("allIds")
+    .map((v) => String(v))
+    .filter(Boolean);
+  const draftIds = new Set(
+    formData
+      .getAll("draft")
+      .map((v) => String(v))
+      .filter(Boolean),
+  );
 
-  const isDraft = String(formData.get("isDraft") ?? "false") === "true";
-  const status: "DRAFT" | "ACTIVE" = isDraft ? "DRAFT" : "ACTIVE";
+  const toDraft = allIds.filter((id) => draftIds.has(id));
+  const toActive = allIds.filter((id) => !draftIds.has(id));
 
-  await prisma.product.update({
-    where: { id: productId },
-    data: { status },
-  });
+  await prisma.$transaction([
+    prisma.product.updateMany({
+      where: { id: { in: toDraft } },
+      data: { status: "DRAFT" },
+    }),
+    prisma.product.updateMany({
+      where: { id: { in: toActive } },
+      data: { status: "ACTIVE" },
+    }),
+  ]);
 
   revalidatePath("/admin/produits");
-}
-
-export async function activateAllProducts() {
-  await ensureAdmin();
-
-  await prisma.product.updateMany({
-    data: { status: "ACTIVE" },
-  });
-
-  revalidatePath("/admin/produits");
+  revalidatePath("/");
 }
 
 export async function updateProduct(productId: string, formData: FormData) {

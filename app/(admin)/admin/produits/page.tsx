@@ -4,13 +4,16 @@ import { prisma } from "@/lib/prisma";
 import {
   updateProductStock,
   deleteProduct,
-  toggleProductDraftStatus,
-  activateAllProducts,
+  saveProductStatuses,
 } from "@/app/(admin)/admin/actions";
 import { storefrontMainMenu } from "@/lib/menu";
 import { ConfirmSubmitButton } from "@/components/admin/confirm-submit-button";
 import { HiboutikSyncButton } from "@/components/admin/hiboutik-sync-button";
-import { ProductStatusToggle } from "@/components/admin/product-status-toggle";
+import {
+  ProductStatusToggle,
+  BULK_STATUS_FORM_ID,
+} from "@/components/admin/product-status-toggle";
+import { UncheckAllButton } from "@/components/admin/uncheck-all-button";
 
 export const dynamic = "force-dynamic";
 
@@ -278,12 +281,17 @@ export default async function AdminProductsPage({
         <h1 className="font-serif text-4xl text-ink">Produits</h1>
         <div className="flex flex-wrap gap-2">
           <HiboutikSyncButton />
-          <form action={activateAllProducts}>
+          <form
+            id={BULK_STATUS_FORM_ID}
+            action={saveProductStatuses}
+            className="flex gap-2"
+          >
+            <UncheckAllButton formId={BULK_STATUS_FORM_ID} />
             <button
               type="submit"
-              className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+              className="rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
             >
-              Tout décocher
+              Enregistrer
             </button>
           </form>
           <Link

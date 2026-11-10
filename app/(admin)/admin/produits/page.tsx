@@ -173,6 +173,9 @@ export default async function AdminProductsPage({
     ? { name: { contains: query, mode: "insensitive" as const } }
     : undefined;
 
+  const productPageSize = query ? SEARCH_PAGE_SIZE : CATEGORY_PAGE_SIZE;
+  const productSkip = (page - 1) * productPageSize;
+
   const [products, searchTotal, categories, totalProducts] = await Promise.all([
     prisma.product.findMany({
       where: searchWhere,
@@ -187,9 +190,8 @@ export default async function AdminProductsPage({
         _count: { select: { orderItems: true } },
       },
       orderBy: { name: "asc" },
-      ...(query
-        ? { take: SEARCH_PAGE_SIZE, skip: (page - 1) * SEARCH_PAGE_SIZE }
-        : { take: CATEGORY_PAGE_SIZE, skip: (page - 1) * CATEGORY_PAGE_SIZE }),
+      take: productPageSize,
+      skip: productSkip,
     }),
     query ? prisma.product.count({ where: searchWhere }) : Promise.resolve(0),
     prisma.category.findMany({

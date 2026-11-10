@@ -127,7 +127,27 @@ function ProductRows({ products }: Readonly<{ products: AdminProductRow[] }>) {
                   </button>
                 </form>
               </td>
-              <td className="px-4 py-2.5 text-neutral-600">{product.status}</td>
+              <td className="px-4 py-2.5 text-neutral-600">
+                <form
+                  action={toggleProductDraftStatus.bind(null, product.id)}
+                  className="flex items-center gap-2"
+                >
+                  <label className="inline-flex items-center gap-2 text-xs font-medium text-neutral-700">
+                    <input
+                      type="checkbox"
+                      name="isDraft"
+                      defaultChecked={product.status === "DRAFT"}
+                      onChange={(event) => {
+                        if (event.currentTarget.form) {
+                          event.currentTarget.form.requestSubmit();
+                        }
+                      }}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    <span>Brouillon</span>
+                  </label>
+                </form>
+              </td>
               <td className="px-4 py-2.5">
                 <div className="flex items-center gap-3">
                   <Link

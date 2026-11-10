@@ -409,6 +409,25 @@ export async function updateProductStock(
   revalidatePath("/admin/produits");
 }
 
+export async function toggleProductDraftStatus(
+  productId: string,
+  formData: FormData,
+) {
+  await ensureAdmin();
+
+  if (!productId) return;
+
+  const isDraft = String(formData.get("isDraft") ?? "false") === "true";
+  const status: "DRAFT" | "ACTIVE" = isDraft ? "DRAFT" : "ACTIVE";
+
+  await prisma.product.update({
+    where: { id: productId },
+    data: { status },
+  });
+
+  revalidatePath("/admin/produits");
+}
+
 export async function updateProduct(productId: string, formData: FormData) {
   await ensureAdmin();
 

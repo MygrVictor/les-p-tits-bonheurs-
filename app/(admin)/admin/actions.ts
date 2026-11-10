@@ -257,7 +257,8 @@ export async function createProduct(formData: FormData) {
   const subCategoryId = String(formData.get("subCategoryId") ?? "").trim();
   const resolvedCategoryId = subCategoryId || categoryId;
   const brandId = String(formData.get("brandId") ?? "").trim();
-  const status = String(formData.get("status") ?? "DRAFT").trim();
+  const isDraft = String(formData.get("isDraft") ?? "true") === "true";
+  const status = isDraft ? "DRAFT" : "ACTIVE";
   const isNew = String(formData.get("isNew") ?? "false") === "true";
   const colorInput = String(formData.get("color") ?? "").trim();
   const color =
@@ -419,7 +420,8 @@ export async function updateProduct(productId: string, formData: FormData) {
   const subCategoryId = String(formData.get("subCategoryId") ?? "").trim();
   const resolvedCategoryId = subCategoryId || categoryId;
   const brandId = String(formData.get("brandId") ?? "").trim();
-  const status = String(formData.get("status") ?? "DRAFT").trim();
+  const isDraft = String(formData.get("isDraft") ?? "true") === "true";
+  const status = isDraft ? "DRAFT" : "ACTIVE";
   const isNew = String(formData.get("isNew") ?? "false") === "true";
   const colorInput = String(formData.get("color") ?? "").trim();
   const color =
@@ -464,7 +466,7 @@ export async function updateProduct(productId: string, formData: FormData) {
       stock: Number.isFinite(stock) ? Math.max(0, Math.trunc(stock)) : 0,
       categoryId: resolvedCategoryId,
       brandId,
-      status: status === "ACTIVE" || status === "ARCHIVED" ? status : "DRAFT",
+      status,
       isNew,
       color,
       // N'écrase les images que si la liste finale n'est pas vide — évite

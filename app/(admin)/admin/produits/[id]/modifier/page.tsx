@@ -99,15 +99,15 @@ export default async function EditProductPage({
 
         <div>
           <label className="text-sm text-neutral-600">Statut</label>
-          <select
-            name="status"
-            defaultValue={product.status}
-            className="mt-1 w-full rounded-xl border border-neutral-200 px-3 py-2"
-          >
-            <option value="DRAFT">Brouillon</option>
-            <option value="ACTIVE">Actif</option>
-            <option value="ARCHIVED">Archivé</option>
-          </select>
+          <label className="mt-1 flex items-center gap-3 rounded-xl border border-neutral-200 px-3 py-2 text-sm text-neutral-700">
+            <input
+              type="checkbox"
+              name="isDraft"
+              defaultChecked={product.status === "DRAFT"}
+              className="h-4 w-4 accent-primary"
+            />
+            <span>Mode brouillon</span>
+          </label>
         </div>
 
         <div>

@@ -22,8 +22,17 @@ type HiboutikProduct = {
   product_barcode?: string;
   product_supplier_reference?: string;
   product_price?: string;
+  product_desc?: string;
   product_stock_management?: number;
   product_arch?: number;
+};
+
+type HiboutikProductImage = {
+  url?: string;
+};
+
+type HiboutikProductDetails = HiboutikProduct & {
+  images?: HiboutikProductImage[];
 };
 
 type HiboutikStockRow = {
@@ -120,6 +129,24 @@ function slugify(input: string): string {
 
 type NamedRow = Record<string, unknown>;
 
+async function getHiboutikProductDetails(
+  productId: number,
+): Promise<HiboutikProductDetails | null> {
+  try {
+    const rows = await hiboutik<HiboutikProductDetails[]>(
+      `/products/${productId}`,
+    );
+    if (!Array.isArray(rows) || rows.length === 0) return null;
+    return rows[0] ?? null;
+  } catch (error) {
+    console.warn(
+      `[hiboutik] détail produit indisponible (${productId}):`,
+      error,
+    );
+    return null;
+  }
+}
+
 /** Table id → nom pour /brands ou /categories (noms de champs défensifs). */
 async function loadNames(
   path: string,
@@ -166,7 +193,7 @@ async function ensureCategory(name: string): Promise<string> {
 
 /**
  * Crée sur le site les produits saisis dans Hiboutik qui n'y existent pas encore.
- * Créés en BROUILLON (DRAFT) : la cliente ajoute photos + description puis publie.
+ * Créés en BROUILLON (DRAFT) : la cliente vérifie puis publie.
  * Marque / catégorie reprises de Hiboutik (créées si besoin), sinon « À classer ».
  */
 async function createMissingProducts(
@@ -197,9 +224,16 @@ async function createMissingProducts(
 
   let created = 0;
   for (const p of toCreate) {
+    const details = await getHiboutikProductDetails(p.product_id);
+    const source = details ?? p;
     const sku = hiboutikSku(p);
     const name = p.product_model!.trim();
-    const raw = p as unknown as NamedRow;
+    const raw = source as unknown as NamedRow;
+    const desc =
+      typeof source.product_desc === "string" ? source.product_desc.trim() : "";
+    const images = (details?.images ?? [])
+      .map((img) => img?.url?.trim())
+      .filter((url): url is string => Boolean(url));
     const brandId = await ensureBrand(
       brandNames.get(Number(raw.product_brand)) ?? "Les P'tits Bonheurs",
     );
@@ -217,9 +251,10 @@ async function createMissingProducts(
           name,
           slug: `${slugify(name) || "produit"}-${slugify(sku)}`,
           sku,
-          description: "",
+          description: desc,
           price,
           salePrice: discount > 0 && discount < price ? discount : null,
+          images,
           stock: Math.max(0, stockById.get(p.product_id) ?? 0),
           status: "DRAFT",
           isNew: true,

@@ -22,9 +22,12 @@ export async function syncHiboutikAction(
     const missing = r.unmatchedSiteSkus.length
       ? ` — ${r.unmatchedSiteSkus.length} réf. absentes de la caisse (${r.unmatchedSiteSkus.slice(0, 5).join(", ")}${r.unmatchedSiteSkus.length > 5 ? "…" : ""})`
       : "";
+    const unmapped = r.unmappedCategories.length
+      ? ` ⚠ Catégories Hiboutik sans équivalent sur le site : ${r.unmappedCategories.join(", ")}.`
+      : "";
     return {
       ok: true,
-      message: `${r.created} nouveaux produits créés (en brouillon), ${r.matched} produits liés, ${r.recategorized} produits re-classés dans les bonnes catégories, ${r.updated} stocks mis à jour, ${r.imagesImported} produits avec photos importées${r.imagesRemaining > 0 ? ` (${r.imagesRemaining} restants : relance la synchro)` : ""}${missing}.`,
+      message: `${r.created} nouveaux produits créés (en brouillon), ${r.matched} produits liés, ${r.recategorized} produits re-classés dans les bonnes catégories, ${r.updated} stocks mis à jour, ${r.imagesImported} produits avec photos importées${r.imagesRemaining > 0 ? ` (${r.imagesRemaining} restants : relance la synchro)` : ""}${missing}.${unmapped}`,
     };
   } catch (error) {
     console.error(error);

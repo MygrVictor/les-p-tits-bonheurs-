@@ -113,6 +113,7 @@ export type HiboutikSyncReport = {
   imagesImported: number;
   imagesRemaining: number;
   recategorized: number;
+  unmappedCategories: string[];
 };
 
 /** Clé de liaison site ↔ caisse : code-barres, sinon réf. fournisseur, sinon id Hiboutik. */
@@ -198,95 +199,136 @@ async function ensureCategory(name: string): Promise<string> {
 }
 
 /**
- * Les catégories Hiboutik sont à plat (BRACELETS, COLLIERS…) alors que le
- * site les range dans son arborescence (Bijouterie > Acier inoxydable / Plaqué Or,
- * Perlerie…). On traduit donc vers le slug de la catégorie du site.
- * Bijoux : « plaqué » dans le nom → Plaqué Or, « acier » → Acier inoxydable,
- * sinon Bijouterie. Le filtre « Type » du site repère ensuite bracelet/collier… par le nom.
+ * Hiboutik n'a qu'UNE catégorie par produit, sans sous-catégories. Le site a son
+ * arbre (Bijouterie > Acier inoxydable / Plaqué Or, Perlerie, Jeux & DIY > Puzzles…).
+ *
+ * Règle : le NOM de la catégorie Hiboutik doit être celui d'une catégorie du site
+ * (n'importe quel niveau, sans tenir compte des accents/majuscules). On accepte aussi
+ * « Parent > Enfant » : seul le dernier élément compte. Les types (bracelet, collier,
+ * boucles…) ne sont pas des catégories : le filtre « Type » du site les repère dans le
+ * nom du produit.
  */
-const JEWELRY_CATEGORY_SLUGS = new Set([
+const LEGACY_FLAT_SLUGS = new Set([
   "boucles-d-oreilles",
   "bracelets",
   "colliers",
   "chevillieres",
   "ear-cuff",
+  "perles",
 ]);
 
-/** Slugs des catégories à plat créées automatiquement par la synchro (à reclasser). */
-const FLAT_CATEGORY_SLUGS = [...JEWELRY_CATEGORY_SLUGS, "perles"];
+type SiteCategories = {
+  byName: Map<string, string>;
+  bySlug: Map<string, string>;
+};
 
-function siteCategorySlugFor(
+/** Les anciennes catégories à plat créées automatiquement sont exclues du match par nom. */
+async function loadSiteCategories(): Promise<SiteCategories> {
+  const rows = await prisma.category.findMany({
+    select: { id: true, name: true, slug: true },
+  });
+  const byName = new Map<string, string>();
+  const bySlug = new Map<string, string>();
+  for (const c of rows) {
+    bySlug.set(c.slug, c.id);
+    if (!LEGACY_FLAT_SLUGS.has(c.slug)) byName.set(slugify(c.name), c.id);
+  }
+  return { byName, bySlug };
+}
+
+function lastSegment(label: string): string {
+  const parts = label
+    .split(/[>/]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return parts[parts.length - 1] ?? label.trim();
+}
+
+/** Secours pour les anciennes catégories Hiboutik à plat (BRACELETS, COLLIERS…). */
+function legacySlugFor(
   hiboutikCategory: string,
   productName: string,
 ): string | null {
   const cat = slugify(hiboutikCategory);
-  if (JEWELRY_CATEGORY_SLUGS.has(cat)) {
+  if (cat === "perles") return "perlerie";
+  if (
+    [
+      "boucles-d-oreilles",
+      "bracelets",
+      "colliers",
+      "chevillieres",
+      "ear-cuff",
+    ].includes(cat)
+  ) {
     const name = slugify(productName);
     if (name.includes("plaque")) return "bijouterie-plaque-or";
     if (name.includes("acier")) return "bijouterie-acier-inoxydable";
     return "bijouterie";
   }
-  if (cat === "perles") return "perlerie";
   return null;
 }
 
-async function resolveSiteCategoryId(
+/** `direct` = la catégorie Hiboutik porte le nom d'une catégorie du site. */
+function resolveSiteCategory(
   hiboutikCategory: string,
   productName: string,
-  cache: Map<string, string | null>,
-): Promise<string | null> {
-  const slug = siteCategorySlugFor(hiboutikCategory, productName);
-  if (!slug) return null;
-  if (!cache.has(slug)) {
-    const found = await prisma.category.findUnique({
-      where: { slug },
-      select: { id: true },
-    });
-    cache.set(slug, found?.id ?? null);
-  }
-  return cache.get(slug) ?? null;
+  site: SiteCategories,
+): { id: string | null; direct: boolean } {
+  const direct = site.byName.get(slugify(lastSegment(hiboutikCategory)));
+  if (direct) return { id: direct, direct: true };
+  const slug = legacySlugFor(hiboutikCategory, productName);
+  return { id: slug ? (site.bySlug.get(slug) ?? null) : null, direct: false };
 }
 
 /**
- * Range dans l'arborescence du site les produits restés dans une catégorie à plat
- * créée par une synchro précédente. Les produits que la cliente a déjà rangés
- * ailleurs ne sont pas touchés.
+ * Hiboutik = source de vérité de la catégorie : si son nom correspond à une catégorie
+ * du site, le produit y est déplacé. Pour les anciennes catégories à plat, la règle de
+ * secours ne s'applique qu'aux produits encore dans ces catégories (un rangement
+ * manuel fait ensuite sur le site n'est pas écrasé).
+ * Renvoie aussi les noms de catégories Hiboutik sans équivalent sur le site.
  */
 async function reclassifyProducts(
   byKey: Map<string, HiboutikProduct>,
-): Promise<number> {
-  const flat = await prisma.product.findMany({
-    where: {
-      sku: { not: null },
-      category: { slug: { in: FLAT_CATEGORY_SLUGS } },
-    },
-    select: { id: true, sku: true, name: true, categoryId: true },
-  });
-  if (flat.length === 0) return 0;
+): Promise<{ moved: number; unmapped: string[] }> {
+  const [siteProducts, categoryNames, site] = await Promise.all([
+    prisma.product.findMany({
+      where: { sku: { not: null } },
+      select: {
+        id: true,
+        sku: true,
+        name: true,
+        categoryId: true,
+        category: { select: { slug: true } },
+      },
+    }),
+    loadNames("/categories", "category"),
+    loadSiteCategories(),
+  ]);
 
-  const categoryNames = await loadNames("/categories", "category");
-  const cache = new Map<string, string | null>();
   let moved = 0;
+  const unmapped = new Set<string>();
 
-  for (const sp of flat) {
+  for (const sp of siteProducts) {
     const hp = byKey.get(norm(sp.sku));
     if (!hp) continue;
     const hiboutikCategory = categoryNames.get(Number(hp.product_category));
     if (!hiboutikCategory) continue;
-    const targetId = await resolveSiteCategoryId(
-      hiboutikCategory,
-      sp.name,
-      cache,
-    );
-    if (targetId && targetId !== sp.categoryId) {
+
+    const { id, direct } = resolveSiteCategory(hiboutikCategory, sp.name, site);
+    if (!id) {
+      unmapped.add(hiboutikCategory);
+      continue;
+    }
+    const allowed = direct || LEGACY_FLAT_SLUGS.has(sp.category.slug);
+    if (allowed && id !== sp.categoryId) {
       await prisma.product.update({
         where: { id: sp.id },
-        data: { categoryId: targetId },
+        data: { categoryId: id },
       });
       moved++;
     }
   }
-  return moved;
+  return { moved, unmapped: [...unmapped].sort() };
 }
 
 /**
@@ -321,7 +363,7 @@ async function createMissingProducts(
   ]);
 
   let created = 0;
-  const categoryCache = new Map<string, string | null>();
+  const siteCategories = await loadSiteCategories();
   for (const p of toCreate) {
     const details = await getHiboutikProductDetails(p.product_id);
     const source = details ?? p;
@@ -336,7 +378,7 @@ async function createMissingProducts(
     const hiboutikCategory = categoryNames.get(Number(raw.product_category));
     const categoryId =
       (hiboutikCategory
-        ? await resolveSiteCategoryId(hiboutikCategory, name, categoryCache)
+        ? resolveSiteCategory(hiboutikCategory, name, siteCategories).id
         : null) ?? (await ensureCategory(hiboutikCategory ?? "À classer"));
     const price = Math.round((Number(p.product_price) || 0) * 100);
     const discount = Math.round(
@@ -501,7 +543,8 @@ export async function syncStockFromHiboutik(
   }
 
   const created = await createMissingProducts(products, stockById);
-  const recategorized = await reclassifyProducts(byKey);
+  const { moved: recategorized, unmapped: unmappedCategories } =
+    await reclassifyProducts(byKey);
 
   // Hiboutik ne renvoie pas de niveaux de stock pour ce compte/warehouse =>
   // on ne doit pas écraser les stocks du site à 0 en l'absence de donnée.
@@ -545,6 +588,7 @@ export async function syncStockFromHiboutik(
     imagesImported: images.imported,
     imagesRemaining: images.remaining,
     recategorized,
+    unmappedCategories,
   };
 }
 

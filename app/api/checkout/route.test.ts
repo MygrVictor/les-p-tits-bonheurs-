@@ -38,6 +38,14 @@ const validBody = {
   postalCode: "75001",
   city: "Paris",
   shippingCountry: "FR",
+  relayPoint: {
+    id: "MR-75001-A",
+    name: "Point Relais Paris Centre",
+    address: "12 rue des Lilas",
+    postalCode: "75001",
+    city: "Paris",
+    country: "FR",
+  },
 };
 
 function activeProduct(overrides: Record<string, unknown> = {}) {

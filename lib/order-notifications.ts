@@ -81,6 +81,12 @@ export async function sendOrderConfirmation(params: {
   orderId: string;
   total: number;
   items: { productName: string; quantity: number; price: number }[];
+  relayPoint?: {
+    name: string;
+    address: string;
+    postalCode: string;
+    city: string;
+  } | null;
 }): Promise<boolean> {
   const orderRef = params.orderId.slice(-6).toUpperCase();
 
@@ -96,6 +102,14 @@ export async function sendOrderConfirmation(params: {
     ...itemLines,
     "",
     `Total : ${(params.total / 100).toFixed(2)} €`,
+    ...(params.relayPoint
+      ? [
+          "",
+          "Point relais choisi :",
+          `${params.relayPoint.name}`,
+          `${params.relayPoint.address}, ${params.relayPoint.postalCode} ${params.relayPoint.city}`,
+        ]
+      : []),
     "",
     "Nous préparons votre colis avec soin. Vous recevrez un nouvel email dès",
     "qu'il sera expédié, avec le numéro de suivi.",

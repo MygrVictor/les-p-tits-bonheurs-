@@ -13,6 +13,7 @@ describe("isShippingCountry", () => {
   });
 
   it("returns false for unsupported countries", () => {
+    expect(isShippingCountry("BE")).toBe(false);
     expect(isShippingCountry("US")).toBe(false);
     expect(isShippingCountry("CN")).toBe(false);
     expect(isShippingCountry("")).toBe(false);
@@ -20,10 +21,10 @@ describe("isShippingCountry", () => {
 });
 
 describe("getShippingOptionsForCountry", () => {
-  it("returns 2 options for France", () => {
+  it("returns one Mondial Relay option for France", () => {
     const opts = getShippingOptionsForCountry("FR");
-    expect(opts).toHaveLength(2);
-    expect(opts[0].shipping_rate_data.display_name).toContain("Colissimo");
+    expect(opts).toHaveLength(1);
+    expect(opts[0].shipping_rate_data.display_name).toContain("Mondial Relay");
   });
 
   it("returns options with positive amounts", () => {
@@ -36,21 +37,9 @@ describe("getShippingOptionsForCountry", () => {
     }
   });
 
-  it("returns different options for Canada vs France", () => {
-    const fr = getShippingOptionsForCountry("FR");
-    const ca = getShippingOptionsForCountry("CA");
-    expect(fr[0].shipping_rate_data.display_name).not.toBe(
-      ca[0].shipping_rate_data.display_name,
-    );
-  });
-
-  it("returns Europe options for BE, CH, LU, DE, ES, IT", () => {
-    const europeanCountries = ["BE", "CH", "LU", "DE", "ES", "IT"] as const;
-    for (const country of europeanCountries) {
-      const opts = getShippingOptionsForCountry(country);
-      expect(opts[0].shipping_rate_data.display_name).toContain(
-        "International",
-      );
-    }
+  it("offers free Mondial Relay when threshold is reached", () => {
+    const opts = getShippingOptionsForCountry("FR", 5000);
+    expect(opts[0].shipping_rate_data.fixed_amount.amount).toBe(0);
+    expect(opts[0].shipping_rate_data.display_name).toContain("Offerts");
   });
 });

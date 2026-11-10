@@ -19,6 +19,11 @@ const envSchema = z.object({
   CLOUDINARY_CLOUD_NAME: z.string().min(1),
   CLOUDINARY_API_KEY: z.string().min(1),
   CLOUDINARY_API_SECRET: z.string().min(1),
+  MONDIAL_RELAY_API_URL: z.string().url().optional(),
+  MONDIAL_RELAY_API_KEY: z.string().min(1).optional(),
+  MONDIAL_RELAY_ENSEIGNE: z.string().min(1).optional(),
+  MONDIAL_RELAY_PRIVATE_KEY: z.string().min(1).optional(),
+  MONDIAL_RELAY_USE_MOCK: z.enum(["true", "false"]).optional(),
   AUTH_TRUST_HOST: z.enum(["true", "false"]).optional(),
   NODE_ENV: z.enum(["development", "test", "production"]).optional(),
 });
@@ -51,6 +56,11 @@ export function getEnv(): Env {
     CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
     CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
     CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
+    MONDIAL_RELAY_API_URL: process.env.MONDIAL_RELAY_API_URL,
+    MONDIAL_RELAY_API_KEY: process.env.MONDIAL_RELAY_API_KEY,
+    MONDIAL_RELAY_ENSEIGNE: process.env.MONDIAL_RELAY_ENSEIGNE,
+    MONDIAL_RELAY_PRIVATE_KEY: process.env.MONDIAL_RELAY_PRIVATE_KEY,
+    MONDIAL_RELAY_USE_MOCK: process.env.MONDIAL_RELAY_USE_MOCK,
     AUTH_TRUST_HOST: process.env.AUTH_TRUST_HOST,
     NODE_ENV: process.env.NODE_ENV,
   });

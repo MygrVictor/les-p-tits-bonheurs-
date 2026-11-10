@@ -53,7 +53,17 @@ describe("finalizeCheckoutSession", () => {
   });
 
   it("returns existing order when already finalized", async () => {
-    retrieveMock.mockResolvedValue({ id: "cs_existing" });
+    retrieveMock.mockResolvedValue({
+      id: "cs_existing",
+      metadata: {
+        relayId: "MR-75001-A",
+        relayName: "Point Relais Paris Centre",
+        relayAddress: "12 rue des Lilas",
+        relayPostalCode: "75001",
+        relayCity: "Paris",
+        shippingCountry: "FR",
+      },
+    });
     findUniqueMock.mockResolvedValue({
       id: "ord_1",
       total: 3200,
@@ -70,6 +80,7 @@ describe("finalizeCheckoutSession", () => {
     if (result.status === "ok") {
       expect(result.order.id).toBe("ord_1");
       expect(result.order.items[0].productName).toBe("Bracelet");
+      expect(result.order.relayPoint?.name).toBe("Point Relais Paris Centre");
     }
   });
 
@@ -130,6 +141,12 @@ describe("finalizeCheckoutSession", () => {
             name: "Bracelet",
           },
         ]),
+        relayId: "MR-75001-A",
+        relayName: "Point Relais Paris Centre",
+        relayAddress: "12 rue des Lilas",
+        relayPostalCode: "75001",
+        relayCity: "Paris",
+        shippingCountry: "FR",
       },
       payment_intent: "pi_1",
     });
@@ -189,12 +206,19 @@ describe("finalizeCheckoutSession", () => {
     if (result.status === "ok") {
       expect(result.order.id).toBe("ord_new");
       expect(result.order.email).toBe("client@example.com");
+      expect(result.order.relayPoint?.postalCode).toBe("75001");
     }
     expect(sendOrderConfirmationMock).toHaveBeenCalledTimes(1);
     expect(sendOrderConfirmationMock.mock.calls[0][0]).toMatchObject({
       email: "client@example.com",
       orderId: "ord_new",
       total: 3000,
+      relayPoint: {
+        name: "Point Relais Paris Centre",
+        address: "12 rue des Lilas",
+        postalCode: "75001",
+        city: "Paris",
+      },
     });
   });
 });

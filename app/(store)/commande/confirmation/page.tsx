@@ -96,6 +96,16 @@ export default async function ConfirmationPage({
           <span>Total</span>
           <span>{(order.total / 100).toFixed(2)} €</span>
         </div>
+        {order.relayPoint && (
+          <div className="rounded-2xl border border-neutral-100 bg-neutral-50 p-4 text-sm text-neutral-600">
+            <p className="font-semibold text-ink">Point relais choisi</p>
+            <p className="mt-1">{order.relayPoint.name}</p>
+            <p>
+              {order.relayPoint.address}, {order.relayPoint.postalCode}{" "}
+              {order.relayPoint.city}
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row">

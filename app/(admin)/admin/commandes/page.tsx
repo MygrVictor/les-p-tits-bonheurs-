@@ -29,6 +29,12 @@ export default async function AdminOrdersPage({
       include: {
         user: { select: { email: true } },
         items: { select: { quantity: true } },
+        events: {
+          where: { type: "ORDER_CONFIRMED" },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { data: true },
+        },
       },
       orderBy: { createdAt: "desc" },
       take: PAGE_SIZE,
@@ -86,6 +92,20 @@ export default async function AdminOrdersPage({
                 (sum, item) => sum + item.quantity,
                 0,
               );
+              const relayPoint = (() => {
+                const payload = order.events[0]?.data as
+                  | {
+                      relayPoint?: {
+                        name?: string;
+                        address?: string;
+                        postalCode?: string;
+                        city?: string;
+                      };
+                    }
+                  | undefined;
+
+                return payload?.relayPoint ?? null;
+              })();
 
               return (
                 <tr key={order.id} className="border-t border-neutral-100">
@@ -103,54 +123,66 @@ export default async function AdminOrdersPage({
                     {new Date(order.createdAt).toLocaleDateString("fr-FR")}
                   </td>
                   <td className="px-4 py-3">
-                    <form
-                      action={updateOrderStatus.bind(null, order.id)}
-                      className="flex min-w-[220px] flex-col gap-1.5"
-                    >
-                      <select
-                        name="status"
-                        defaultValue={order.status}
-                        className="rounded-lg border border-neutral-200 px-2 py-1 text-sm"
+                    <div className="flex min-w-[220px] flex-col gap-2">
+                      {relayPoint && (
+                        <div className="rounded-xl bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
+                          <p className="font-semibold text-ink">Point relais</p>
+                          <p>{relayPoint.name}</p>
+                          <p>
+                            {relayPoint.address}, {relayPoint.postalCode}{" "}
+                            {relayPoint.city}
+                          </p>
+                        </div>
+                      )}
+                      <form
+                        action={updateOrderStatus.bind(null, order.id)}
+                        className="flex flex-col gap-1.5"
                       >
-                        <option value="PENDING">En attente</option>
-                        <option value="CONFIRMED">Payée / confirmée</option>
-                        <option value="SHIPPED">Expédiée</option>
-                        <option value="DELIVERED">Livrée</option>
-                        <option value="CANCELLED">Annulée</option>
-                      </select>
-                      <div className="flex gap-1.5">
                         <select
-                          name="carrier"
-                          defaultValue={order.carrier ?? ""}
-                          className="w-1/2 rounded-lg border border-neutral-200 px-2 py-1 text-xs"
+                          name="status"
+                          defaultValue={order.status}
+                          className="rounded-lg border border-neutral-200 px-2 py-1 text-sm"
                         >
-                          <option value="">Transporteur…</option>
-                          {CARRIERS.map((carrier) => (
-                            <option key={carrier.id} value={carrier.id}>
-                              {carrier.label}
-                            </option>
-                          ))}
+                          <option value="PENDING">En attente</option>
+                          <option value="CONFIRMED">Payée / confirmée</option>
+                          <option value="SHIPPED">Expédiée</option>
+                          <option value="DELIVERED">Livrée</option>
+                          <option value="CANCELLED">Annulée</option>
                         </select>
-                        <input
-                          type="text"
-                          name="trackingNumber"
-                          defaultValue={order.trackingNumber ?? ""}
-                          placeholder="N° de suivi"
-                          className="w-1/2 rounded-lg border border-neutral-200 px-2 py-1 text-xs"
-                        />
-                      </div>
-                      <button
-                        type="submit"
-                        className="rounded-lg bg-primary px-2 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-hover"
-                      >
-                        Enregistrer
-                      </button>
-                      <p className="text-[11px] text-neutral-400">
-                        Renseigner un n° de suivi envoie un email automatique au
-                        client. Un message apparaîtra en haut de page pour
-                        confirmer l&apos;envoi (ou signaler un échec).
-                      </p>
-                    </form>
+                        <div className="flex gap-1.5">
+                          <select
+                            name="carrier"
+                            defaultValue={order.carrier ?? ""}
+                            className="w-1/2 rounded-lg border border-neutral-200 px-2 py-1 text-xs"
+                          >
+                            <option value="">Transporteur…</option>
+                            {CARRIERS.map((carrier) => (
+                              <option key={carrier.id} value={carrier.id}>
+                                {carrier.label}
+                              </option>
+                            ))}
+                          </select>
+                          <input
+                            type="text"
+                            name="trackingNumber"
+                            defaultValue={order.trackingNumber ?? ""}
+                            placeholder="N° de suivi"
+                            className="w-1/2 rounded-lg border border-neutral-200 px-2 py-1 text-xs"
+                          />
+                        </div>
+                        <button
+                          type="submit"
+                          className="rounded-lg bg-primary px-2 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-hover"
+                        >
+                          Enregistrer
+                        </button>
+                        <p className="text-[11px] text-neutral-400">
+                          Renseigner un n° de suivi envoie un email automatique
+                          au client. Un message apparaîtra en haut de page pour
+                          confirmer l&apos;envoi (ou signaler un échec).
+                        </p>
+                      </form>
+                    </div>
                   </td>
                 </tr>
               );

@@ -14,42 +14,11 @@ type ShippingOption = {
   eta: { minDays: number; maxDays: number };
 };
 
-const FRANCE_OPTIONS: ShippingOption[] = [
+const MONDIAL_RELAY_OPTIONS: ShippingOption[] = [
   {
-    label: "Colissimo Standard",
+    label: "Mondial Relay — Point Relais",
     amount: 590,
-    eta: { minDays: 2, maxDays: 4 },
-  },
-  {
-    label: "Chronopost Express",
-    amount: 1190,
-    eta: { minDays: 1, maxDays: 2 },
-  },
-];
-
-const EUROPE_OPTIONS: ShippingOption[] = [
-  {
-    label: "Colissimo International",
-    amount: 990,
-    eta: { minDays: 3, maxDays: 6 },
-  },
-  {
-    label: "Express Europe",
-    amount: 1490,
-    eta: { minDays: 2, maxDays: 4 },
-  },
-];
-
-const NORTH_AMERICA_OPTIONS: ShippingOption[] = [
-  {
-    label: "International Standard",
-    amount: 1790,
-    eta: { minDays: 5, maxDays: 9 },
-  },
-  {
-    label: "International Express",
-    amount: 2590,
-    eta: { minDays: 3, maxDays: 6 },
+    eta: { minDays: 3, maxDays: 5 },
   },
 ];
 
@@ -64,16 +33,7 @@ const COUNTRY_LABELS: Record<ShippingCountry, string> = {
   CA: "Canada",
 };
 
-export const ALLOWED_SHIPPING_COUNTRIES: ShippingCountry[] = [
-  "FR",
-  "BE",
-  "CH",
-  "LU",
-  "DE",
-  "ES",
-  "IT",
-  "CA",
-];
+export const ALLOWED_SHIPPING_COUNTRIES: ShippingCountry[] = ["FR"];
 
 /**
  * Seuil de commande (en centimes) à partir duquel les frais de port
@@ -96,12 +56,8 @@ export function getShippingOptionsForCountry(
   country: ShippingCountry,
   cartTotalCents = 0,
 ) {
-  const options =
-    country === "FR"
-      ? FRANCE_OPTIONS
-      : country === "CA"
-        ? NORTH_AMERICA_OPTIONS
-        : EUROPE_OPTIONS;
+  void country;
+  const options = MONDIAL_RELAY_OPTIONS;
 
   const freeShipping =
     FREE_SHIPPING_THRESHOLD_CENTS > 0 &&

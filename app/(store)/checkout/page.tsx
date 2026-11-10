@@ -21,6 +21,15 @@ type ShippingForm = {
   country: string;
 };
 
+type RelayPoint = {
+  id: string;
+  name: string;
+  address: string;
+  postalCode: string;
+  city: string;
+  country: "FR";
+};
+
 function splitFullName(value: string): { firstName: string; lastName: string } {
   const trimmed = value.trim();
   if (!trimmed) return { firstName: "", lastName: "" };
@@ -49,6 +58,13 @@ function CheckoutForm({ isGuest }: Readonly<{ isGuest: boolean }>) {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [relayPoints, setRelayPoints] = useState<RelayPoint[]>([]);
+  const [selectedRelayId, setSelectedRelayId] = useState("");
+  const [relaySource, setRelaySource] = useState<"provider" | "mock" | null>(
+    null,
+  );
+  const [relayLoading, setRelayLoading] = useState(false);
+  const [relayError, setRelayError] = useState("");
   const accountPrefilledRef = useRef(false);
 
   useEffect(() => {
@@ -105,6 +121,10 @@ function CheckoutForm({ isGuest }: Readonly<{ isGuest: boolean }>) {
     event.preventDefault();
     setError("");
 
+    const selectedRelay = relayPoints.find(
+      (point) => point.id === selectedRelayId,
+    );
+
     if (
       !form.firstName ||
       !form.lastName ||
@@ -115,6 +135,11 @@ function CheckoutForm({ isGuest }: Readonly<{ isGuest: boolean }>) {
       !form.country
     ) {
       setError("Merci de remplir tous les champs.");
+      return;
+    }
+
+    if (!selectedRelay) {
+      setError("Merci de sélectionner un point relais Mondial Relay.");
       return;
     }
 
@@ -136,6 +161,14 @@ function CheckoutForm({ isGuest }: Readonly<{ isGuest: boolean }>) {
           postalCode: form.postalCode,
           city: form.city,
           shippingCountry: form.country,
+          relayPoint: {
+            id: selectedRelay.id,
+            name: selectedRelay.name,
+            address: selectedRelay.address,
+            postalCode: selectedRelay.postalCode,
+            city: selectedRelay.city,
+            country: selectedRelay.country,
+          },
           items: items.map((item) => ({
             productId: item.productId,
             variantId: item.variantId,
@@ -156,6 +189,57 @@ function CheckoutForm({ isGuest }: Readonly<{ isGuest: boolean }>) {
     } catch {
       setError("Erreur réseau. Vérifiez votre connexion et réessayez.");
       setLoading(false);
+    }
+  };
+
+  const canSearchRelay =
+    form.postalCode.trim().length >= 4 && form.city.trim().length >= 2;
+
+  const handleLoadRelayPoints = async () => {
+    if (!canSearchRelay) {
+      setRelayError("Renseigne un code postal et une ville valides.");
+      return;
+    }
+
+    setRelayLoading(true);
+    setRelayError("");
+    setSelectedRelayId("");
+
+    try {
+      const params = new URLSearchParams({
+        postalCode: form.postalCode.trim(),
+        city: form.city.trim(),
+        country: "FR",
+      });
+      const response = await fetch(
+        `/api/mondial-relay/points?${params.toString()}`,
+      );
+      const data = (await response.json()) as {
+        points?: RelayPoint[];
+        source?: "provider" | "mock";
+        error?: string;
+      };
+
+      if (!response.ok) {
+        setRelayError(data.error ?? "Impossible de charger les points relais.");
+        setRelayPoints([]);
+        setRelaySource(null);
+        return;
+      }
+
+      const points = Array.isArray(data.points) ? data.points : [];
+      setRelayPoints(points);
+      setRelaySource(data.source ?? null);
+
+      if (points.length === 0) {
+        setRelayError("Aucun point relais trouvé pour cette recherche.");
+      }
+    } catch {
+      setRelayError("Impossible de charger les points relais.");
+      setRelayPoints([]);
+      setRelaySource(null);
+    } finally {
+      setRelayLoading(false);
     }
   };
 
@@ -260,7 +344,13 @@ function CheckoutForm({ isGuest }: Readonly<{ isGuest: boolean }>) {
               type="text"
               required
               value={form.postalCode}
-              onChange={update("postalCode")}
+              onChange={(event) => {
+                setForm((f) => ({ ...f, postalCode: event.target.value }));
+                setRelayPoints([]);
+                setSelectedRelayId("");
+                setRelayError("");
+                setRelaySource(null);
+              }}
               placeholder="75001"
               className={inputClass}
             />
@@ -273,33 +363,78 @@ function CheckoutForm({ isGuest }: Readonly<{ isGuest: boolean }>) {
               type="text"
               required
               value={form.city}
-              onChange={update("city")}
+              onChange={(event) => {
+                setForm((f) => ({ ...f, city: event.target.value }));
+                setRelayPoints([]);
+                setSelectedRelayId("");
+                setRelayError("");
+                setRelaySource(null);
+              }}
               placeholder="Paris"
               className={inputClass}
             />
           </div>
         </div>
+
+        <div className="space-y-2 rounded-2xl border border-neutral-100 bg-neutral-50 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+              Point relais Mondial Relay
+            </p>
+            <button
+              type="button"
+              onClick={handleLoadRelayPoints}
+              disabled={relayLoading || !canSearchRelay}
+              className="rounded-full border border-neutral-300 px-3 py-1.5 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-100 disabled:opacity-60"
+            >
+              {relayLoading ? "Recherche..." : "Rechercher des relais"}
+            </button>
+          </div>
+
+          {relaySource === "mock" && (
+            <p className="text-xs text-amber-700">
+              Mode attente API : résultats de démonstration.
+            </p>
+          )}
+
+          {relayError && <p className="text-xs text-rose-600">{relayError}</p>}
+
+          {relayPoints.length > 0 && (
+            <div className="space-y-2">
+              {relayPoints.map((point) => (
+                <label
+                  key={point.id}
+                  className="flex cursor-pointer items-start gap-2 rounded-xl border border-neutral-200 bg-white p-3 text-sm"
+                >
+                  <input
+                    type="radio"
+                    name="relayPoint"
+                    value={point.id}
+                    checked={selectedRelayId === point.id}
+                    onChange={() => setSelectedRelayId(point.id)}
+                    className="mt-1"
+                  />
+                  <span>
+                    <span className="block font-semibold text-ink">
+                      {point.name}
+                    </span>
+                    <span className="block text-neutral-600">
+                      {point.address}, {point.postalCode} {point.city}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="space-y-1.5">
           <label className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-            Pays
+            Zone de livraison
           </label>
-          <select
-            required
-            value={form.country}
-            onChange={(event) =>
-              setForm((f) => ({ ...f, country: event.target.value }))
-            }
-            className={inputClass}
-          >
-            <option value="FR">France</option>
-            <option value="BE">Belgique</option>
-            <option value="CH">Suisse</option>
-            <option value="LU">Luxembourg</option>
-            <option value="DE">Allemagne</option>
-            <option value="ES">Espagne</option>
-            <option value="IT">Italie</option>
-            <option value="CA">Canada</option>
-          </select>
+          <div className="rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-700">
+            France — livraison via Mondial Relay uniquement
+          </div>
         </div>
       </section>
 

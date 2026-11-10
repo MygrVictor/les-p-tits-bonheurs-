@@ -81,6 +81,11 @@ model Product {
   id          String          @id @default(cuid())
   name        String
   slug        String          @unique
+  // Référence fournisseur (colonne "REF" des fichiers de specs). Sert de
+  // clé d'idempotence pour l'import : c'est le seul identifiant stable
+  // côté fournisseur (le libellé, lui, change d'une saison à l'autre).
+  // Nullable car les produits créés à la main dans l'admin n'en ont pas.
+  sku         String?         @unique
   description String
   price       Int
   salePrice   Int?
@@ -99,6 +104,7 @@ model Product {
   category    Category        @relation(fields: [categoryId], references: [id])
   variants    ProductVariant[]
   stone       Stone?
+  supplierSpec ProductSupplierSpec?
   orderItems  OrderItem[]
   wishlistItems WishlistItem[]
   reviews     Review[]
@@ -137,6 +143,54 @@ model Stone {
   virtues   Json     @default("[]")
 
   @@unique([productId])
+}
+
+// Données logistiques issues des fichiers de specs fournisseur (Studio Roof
+// et consorts). Isolées dans une table dédiée plutôt que noyées dans
+// Product : ce sont des données d'approvisionnement, jamais affichées en
+// boutique, et toutes optionnelles selon le fournisseur (les displays, par
+// exemple, n'ont ni casepack ni masterpack).
+// Les dimensions restent des chaînes : les fichiers mélangent les formats
+// ("10x5x20", "10 x 5 x 20 cm", plages…), les normaliser en numérique ferait
+// perdre de l'information sans bénéfice réel.
+model ProductSupplierSpec {
+  id        String  @id @default(cuid())
+  productId String  @unique
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  supplierRef String
+  ean         String?
+  origin      String?
+
+  dimensionsCm     String?
+  dimensionsInches String?
+  weightKg         Float?
+  weightOunces     Float?
+
+  packagingDimensionsCm     String?
+  packagingDimensionsInches String?
+
+  casepackEan        String?
+  casepackQty        Int?
+  casepackDimensions String?
+  casepackWeightKg   Float?
+
+  masterpackEan          String?
+  masterpackQty          Int?
+  masterpackDimensions   String?
+  masterpackNetWeightKg  Float?
+  masterpackGrossWeightKg Float?
+
+  // Onglet + numéro de ligne d'origine : indispensable pour retrouver la
+  // source d'une donnée douteuse dans le fichier fournisseur.
+  sourceSheet String?
+  sourceRow   Int?
+
+  importedAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([ean])
+  @@index([supplierRef])
 }
 
 model Order {

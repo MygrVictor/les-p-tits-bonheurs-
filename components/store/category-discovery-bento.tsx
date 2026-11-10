@@ -28,8 +28,8 @@ type Highlight = {
   categorySlug: string;
   /** Mot-clé (insensible à la casse) recherché dans le nom du produit. */
   nameKeyword?: string;
-  /** Photo utilisée si aucun produit actif n'est trouvé dans la catégorie. */
-  fallbackImage: string;
+  /** Photos de secours utilisées tant que la catégorie n'a pas assez de produits. */
+  fallbackImages: string[];
 };
 
 const HIGHLIGHTS: Highlight[] = [
@@ -40,7 +40,7 @@ const HIGHLIGHTS: Highlight[] = [
     href: "/categorie/bijouterie?type=bracelet",
     categorySlug: "bijouterie",
     nameKeyword: "bracelet",
-    fallbackImage: "/hero.jpg",
+    fallbackImages: ["/zag-bijoux.jpg", "/zag-bijoux2.jpg", "/zag-bijoux3.jpg"],
   },
   {
     key: "perlerie",
@@ -49,7 +49,7 @@ const HIGHLIGHTS: Highlight[] = [
     href: "/categorie/perlerie",
     categorySlug: "perlerie",
     nameKeyword: "perle",
-    fallbackImage: "/perlerie.jpg",
+    fallbackImages: ["/perlerie.jpg", "/images-1.jpg", "/atelier.jpg"],
   },
   {
     key: "jeux-diy",
@@ -58,7 +58,7 @@ const HIGHLIGHTS: Highlight[] = [
     href: "/categorie/jeux-diy-puzzles",
     categorySlug: "jeux-diy",
     nameKeyword: "puzzle",
-    fallbackImage: "/atelier.jpg",
+    fallbackImages: ["/atelier.jpg", "/images-1.jpg", "/hero.jpg"],
   },
   {
     key: "lifestyle",
@@ -67,7 +67,11 @@ const HIGHLIGHTS: Highlight[] = [
     href: "/categorie/lifestyle-maroquinerie",
     categorySlug: "lifestyle",
     nameKeyword: "sac",
-    fallbackImage: "/hero.jpg",
+    fallbackImages: [
+      "/charly-therapy.jpg",
+      "/charly-therapy2.jpg",
+      "/charly-thérapy3.jpg",
+    ],
   },
   {
     key: "decoration-maison",
@@ -76,7 +80,7 @@ const HIGHLIGHTS: Highlight[] = [
     href: "/categorie/decoration-maison-murale",
     categorySlug: "decoration-maison",
     nameKeyword: "plateau",
-    fallbackImage: "/atelier.jpg",
+    fallbackImages: ["/atelier.jpg", "/hero.jpg", "/images-1.jpg"],
   },
   {
     key: "papeterie",
@@ -85,7 +89,7 @@ const HIGHLIGHTS: Highlight[] = [
     href: "/categorie/papeterie",
     categorySlug: "papeterie",
     nameKeyword: "carnet",
-    fallbackImage: "/perlerie.jpg",
+    fallbackImages: ["/images-1.jpg", "/perlerie.jpg", "/atelier.jpg"],
   },
 ];
 
@@ -151,7 +155,11 @@ export async function CategoryDiscoveryBento() {
       }
       if (images.length >= MAX_IMAGES_PER_TILE) break;
     }
-    if (images.length === 0) images.push(highlight.fallbackImage);
+
+    for (const fallbackImage of highlight.fallbackImages) {
+      if (!images.includes(fallbackImage)) images.push(fallbackImage);
+      if (images.length >= MAX_IMAGES_PER_TILE) break;
+    }
 
     return { ...highlight, images };
   });

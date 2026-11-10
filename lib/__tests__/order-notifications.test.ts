@@ -57,7 +57,36 @@ describe("order-notifications", () => {
       orderId: "order_abcdef",
       total: 3500,
       items: [{ productName: "Bracelet", quantity: 2, price: 1500 }],
+      relayPoint: {
+        name: "Point Relais Paris Centre",
+        address: "12 rue des Lilas",
+        postalCode: "75001",
+        city: "Paris",
+      },
     });
     expect(ok).toBe(false);
+  });
+
+  it("includes relay point in order confirmation email", async () => {
+    sendMock.mockResolvedValue({ data: { id: "mail_2" }, error: null });
+    const { sendOrderConfirmation } = await import("../order-notifications");
+
+    const ok = await sendOrderConfirmation({
+      email: "client@example.com",
+      orderId: "order_abcdef",
+      total: 3500,
+      items: [{ productName: "Bracelet", quantity: 2, price: 1500 }],
+      relayPoint: {
+        name: "Point Relais Paris Centre",
+        address: "12 rue des Lilas",
+        postalCode: "75001",
+        city: "Paris",
+      },
+    });
+
+    expect(ok).toBe(true);
+    const payload = sendMock.mock.calls[0][0];
+    expect(payload.text).toContain("Point relais choisi");
+    expect(payload.text).toContain("Point Relais Paris Centre");
   });
 });

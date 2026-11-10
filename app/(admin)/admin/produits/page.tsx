@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { updateProductStock, deleteProduct } from "@/app/(admin)/admin/actions";
 import { storefrontMainMenu } from "@/lib/menu";
 import { ConfirmSubmitButton } from "@/components/admin/confirm-submit-button";
+import { HiboutikSyncButton } from "@/components/admin/hiboutik-sync-button";
 
 export const dynamic = "force-dynamic";
 
@@ -262,12 +263,15 @@ export default async function AdminProductsPage({
     <section className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <h1 className="font-serif text-4xl text-ink">Produits</h1>
-        <Link
-          href="/admin/produits/nouveau"
-          className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-hover"
-        >
-          + Nouveau produit
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <HiboutikSyncButton />
+          <Link
+            href="/admin/produits/nouveau"
+            className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-hover"
+          >
+            + Nouveau produit
+          </Link>
+        </div>
       </div>
 
       <div className="space-y-4 rounded-3xl bg-white p-5 shadow-soft">

@@ -30,6 +30,14 @@ const bodySchema = z.object({
   postalCode: z.string().min(1),
   city: z.string().min(1),
   shippingCountry: z.string().length(2),
+  relayPoint: z.object({
+    id: z.string().min(1),
+    name: z.string().min(1),
+    address: z.string().min(1),
+    postalCode: z.string().min(1),
+    city: z.string().min(1),
+    country: z.string().length(2),
+  }),
 });
 
 function toStringArray(value: unknown): string[] {
@@ -60,6 +68,17 @@ export async function POST(request: Request) {
   if (!isShippingCountry(shippingCountry)) {
     return NextResponse.json(
       { error: "Pays de livraison non pris en charge." },
+      { status: 400 },
+    );
+  }
+
+  const relayCountry = parsed.data.relayPoint.country.toUpperCase();
+  if (shippingCountry !== "FR" || relayCountry !== "FR") {
+    return NextResponse.json(
+      {
+        error:
+          "La livraison Mondial Relay est disponible en France uniquement.",
+      },
       { status: 400 },
     );
   }
@@ -151,10 +170,16 @@ export async function POST(request: Request) {
   const metadata = encodeCartMetadata(metaItems);
   metadata.email = email;
   metadata.shippingCountry = shippingCountry;
-  metadata.shippingName = `${parsed.data.firstName} ${parsed.data.lastName}`.trim();
+  metadata.shippingName =
+    `${parsed.data.firstName} ${parsed.data.lastName}`.trim();
   metadata.shippingAddress = parsed.data.address;
   metadata.shippingPostalCode = parsed.data.postalCode;
   metadata.shippingCity = parsed.data.city;
+  metadata.relayId = parsed.data.relayPoint.id;
+  metadata.relayName = parsed.data.relayPoint.name;
+  metadata.relayAddress = parsed.data.relayPoint.address;
+  metadata.relayPostalCode = parsed.data.relayPoint.postalCode;
+  metadata.relayCity = parsed.data.relayPoint.city;
 
   try {
     const checkoutSession = await stripe.checkout.sessions.create({
@@ -165,9 +190,6 @@ export async function POST(request: Request) {
       allow_promotion_codes: true,
       automatic_tax: { enabled: true },
       billing_address_collection: "auto",
-      shipping_address_collection: {
-        allowed_countries: ALLOWED_SHIPPING_COUNTRIES,
-      },
       shipping_options: getShippingOptionsForCountry(
         shippingCountry,
         cartTotalCents,

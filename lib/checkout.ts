@@ -5,6 +5,7 @@ import type Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { getStripeClient } from "@/lib/stripe";
 import { sendOrderConfirmation } from "@/lib/order-notifications";
+import { pushOrderToHiboutik } from "@/lib/hiboutik";
 
 type OrderWithDetails = Prisma.OrderGetPayload<{
   include: {
@@ -28,12 +29,35 @@ export type FinalizedOrder = {
   createdAt: Date;
   email: string;
   items: { productName: string; quantity: number; price: number }[];
+  relayPoint: {
+    id: string;
+    name: string;
+    address: string;
+    postalCode: string;
+    city: string;
+    country: string;
+  } | null;
 };
 
 export type FinalizeResult =
   | { status: "unpaid" }
   | { status: "invalid" }
   | { status: "ok"; order: FinalizedOrder };
+
+function getRelayPointFromMetadata(
+  metadata: Stripe.Metadata | null | undefined,
+): FinalizedOrder["relayPoint"] {
+  if (!metadata?.relayId || !metadata.relayName) return null;
+
+  return {
+    id: metadata.relayId,
+    name: metadata.relayName,
+    address: metadata.relayAddress ?? "",
+    postalCode: metadata.relayPostalCode ?? "",
+    city: metadata.relayCity ?? "",
+    country: metadata.shippingCountry ?? "FR",
+  };
+}
 
 /**
  * Le panier est stocké dans les metadata Stripe sous forme de JSON,
@@ -115,6 +139,7 @@ export async function finalizeCheckoutSession(
   });
 
   if (existing) {
+    const relayPoint = getRelayPointFromMetadata(session.metadata);
     return {
       status: "ok",
       order: {
@@ -128,6 +153,7 @@ export async function finalizeCheckoutSession(
           quantity: item.quantity,
           price: item.price,
         })),
+        relayPoint,
       },
     };
   }
@@ -146,8 +172,10 @@ export async function finalizeCheckoutSession(
   const shipping = session.shipping_details ?? null;
   const metadataShippingName = session.metadata?.shippingName ?? null;
   const metadataShippingAddress = session.metadata?.shippingAddress ?? null;
-  const metadataShippingPostalCode = session.metadata?.shippingPostalCode ?? null;
+  const metadataShippingPostalCode =
+    session.metadata?.shippingPostalCode ?? null;
   const metadataShippingCity = session.metadata?.shippingCity ?? null;
+  const relayPoint = getRelayPointFromMetadata(session.metadata);
   const shippingAddress = shipping?.address
     ? [
         shipping.address.line1,
@@ -198,7 +226,10 @@ export async function finalizeCheckoutSession(
             email: normalizedEmail,
             password: randomPassword,
             name:
-              shipping?.name ?? metadataShippingName ?? session.customer_details?.name ?? null,
+              shipping?.name ??
+              metadataShippingName ??
+              session.customer_details?.name ??
+              null,
             address: shippingAddress,
             role: "CLIENT",
             emailVerifiedAt: new Date(),
@@ -317,6 +348,7 @@ export async function finalizeCheckoutSession(
           data: {
             sessionId: session.id,
             paymentIntentId: stripeIntentId,
+            relayPoint,
           },
         },
       });
@@ -365,6 +397,22 @@ export async function finalizeCheckoutSession(
         quantity: item.quantity,
         price: item.price,
       })),
+      relayPoint,
+    });
+
+    // Décrémente aussi le stock de la caisse Hiboutik (best effort).
+    const skus = await prisma.product.findMany({
+      where: { id: { in: order.items.map((i) => i.productId) } },
+      select: { id: true, sku: true },
+    });
+    const skuById = new Map(skus.map((p) => [p.id, p.sku]));
+    await pushOrderToHiboutik({
+      id: order.id,
+      items: order.items.map((i) => ({
+        sku: skuById.get(i.productId) ?? null,
+        quantity: i.quantity,
+        price: i.price,
+      })),
     });
   }
 
@@ -381,6 +429,7 @@ export async function finalizeCheckoutSession(
         quantity: item.quantity,
         price: item.price,
       })),
+      relayPoint,
     },
   };
 }

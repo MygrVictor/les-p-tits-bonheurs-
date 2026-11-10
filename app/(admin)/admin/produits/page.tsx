@@ -5,6 +5,7 @@ import {
   updateProductStock,
   deleteProduct,
   toggleProductDraftStatus,
+  activateAllProducts,
 } from "@/app/(admin)/admin/actions";
 import { storefrontMainMenu } from "@/lib/menu";
 import { ConfirmSubmitButton } from "@/components/admin/confirm-submit-button";
@@ -277,6 +278,14 @@ export default async function AdminProductsPage({
         <h1 className="font-serif text-4xl text-ink">Produits</h1>
         <div className="flex flex-wrap gap-2">
           <HiboutikSyncButton />
+          <form action={activateAllProducts}>
+            <button
+              type="submit"
+              className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+            >
+              Tout décocher
+            </button>
+          </form>
           <Link
             href="/admin/produits/nouveau"
             className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-hover"

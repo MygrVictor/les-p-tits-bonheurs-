@@ -428,6 +428,16 @@ export async function toggleProductDraftStatus(
   revalidatePath("/admin/produits");
 }
 
+export async function activateAllProducts() {
+  await ensureAdmin();
+
+  await prisma.product.updateMany({
+    data: { status: "ACTIVE" },
+  });
+
+  revalidatePath("/admin/produits");
+}
+
 export async function updateProduct(productId: string, formData: FormData) {
   await ensureAdmin();
 

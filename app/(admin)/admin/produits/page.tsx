@@ -9,6 +9,7 @@ import {
 import { storefrontMainMenu } from "@/lib/menu";
 import { ConfirmSubmitButton } from "@/components/admin/confirm-submit-button";
 import { HiboutikSyncButton } from "@/components/admin/hiboutik-sync-button";
+import { ProductStatusToggle } from "@/components/admin/product-status-toggle";
 
 export const dynamic = "force-dynamic";
 
@@ -132,25 +133,10 @@ function ProductRows({ products }: Readonly<{ products: AdminProductRow[] }>) {
                 </form>
               </td>
               <td className="px-4 py-2.5 text-neutral-600">
-                <form
-                  action={toggleProductDraftStatus.bind(null, product.id)}
-                  className="flex items-center gap-2"
-                >
-                  <label className="inline-flex items-center gap-2 text-xs font-medium text-neutral-700">
-                    <input
-                      type="checkbox"
-                      name="isDraft"
-                      defaultChecked={product.status === "DRAFT"}
-                      onChange={(event) => {
-                        if (event.currentTarget.form) {
-                          event.currentTarget.form.requestSubmit();
-                        }
-                      }}
-                      className="h-4 w-4 accent-primary"
-                    />
-                    <span>Brouillon</span>
-                  </label>
-                </form>
+                <ProductStatusToggle
+                  productId={product.id}
+                  status={product.status}
+                />
               </td>
               <td className="px-4 py-2.5">
                 <div className="flex items-center gap-3">

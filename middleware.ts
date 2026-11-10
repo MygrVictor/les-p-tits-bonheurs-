@@ -20,6 +20,18 @@ const RATE_LIMIT_RULES: { prefix: string; limit: number }[] = [
 
 const { auth } = NextAuth(authConfig);
 
+function scriptSrcDirective(): string {
+  const base = [
+    "'self'",
+    "'unsafe-inline'",
+    "https://js.stripe.com",
+    "https://www.googletagmanager.com",
+    "https://www.google-analytics.com",
+  ];
+  if (process.env.NODE_ENV !== "production") base.splice(2, 0, "'unsafe-eval'");
+  return `script-src ${base.join(" ")}`;
+}
+
 export default auth(async function middleware(request: NextAuthRequest) {
   const { pathname } = request.nextUrl;
   const role = request.auth?.user?.role;
@@ -68,7 +80,7 @@ export default auth(async function middleware(request: NextAuthRequest) {
     "Content-Security-Policy",
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com",
+      scriptSrcDirective(),
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com https://www.google-analytics.com",

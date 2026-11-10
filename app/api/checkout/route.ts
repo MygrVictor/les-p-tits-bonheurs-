@@ -23,22 +23,29 @@ const bodySchema = z.object({
     )
     .min(1)
     .max(30),
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
+  firstName: z.string().trim().min(1).max(80),
+  lastName: z.string().trim().min(1).max(80),
   email: z.string().email(),
-  address: z.string().min(1),
-  postalCode: z.string().min(1),
-  city: z.string().min(1),
+  address: z.string().trim().min(1).max(200),
+  postalCode: z.string().trim().min(1).max(20),
+  city: z.string().trim().min(1).max(100),
   shippingCountry: z.string().length(2),
   relayPoint: z.object({
-    id: z.string().min(1),
-    name: z.string().min(1),
-    address: z.string().min(1),
-    postalCode: z.string().min(1),
-    city: z.string().min(1),
+    id: z.string().trim().min(1).max(80),
+    name: z.string().trim().min(1).max(160),
+    address: z.string().trim().min(1).max(200),
+    postalCode: z.string().trim().min(1).max(20),
+    city: z.string().trim().min(1).max(100),
     country: z.string().length(2),
   }),
 });
+
+function getPublicSiteUrl(request: Request): string {
+  const configured =
+    process.env.SITE_URL?.trim() || process.env.NEXTAUTH_URL?.trim();
+  if (configured) return configured;
+  return new URL(request.url).origin;
+}
 
 function toStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
@@ -157,10 +164,7 @@ export async function POST(request: Request) {
   }
 
   const stripe = getStripeClient();
-  const origin =
-    request.headers.get("origin") ??
-    process.env.NEXTAUTH_URL ??
-    "http://localhost:3000";
+  const siteUrl = getPublicSiteUrl(request);
 
   const cartTotalCents = metaItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
@@ -195,8 +199,8 @@ export async function POST(request: Request) {
         cartTotalCents,
       ),
       metadata,
-      success_url: `${origin}/commande/confirmation?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/checkout`,
+      success_url: `${siteUrl}/commande/confirmation?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${siteUrl}/checkout`,
     });
 
     return NextResponse.json({ url: checkoutSession.url });

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getCloudinaryClient } from "@/lib/cloudinary";
 
 /**
  * Intégration caisse Hiboutik.
@@ -29,6 +30,7 @@ type HiboutikProduct = {
 
 type HiboutikProductImage = {
   url?: string;
+  image_name?: string;
 };
 
 type HiboutikProductDetails = HiboutikProduct & {
@@ -107,6 +109,8 @@ export type HiboutikSyncReport = {
   matched: number;
   updated: number;
   unmatchedSiteSkus: string[];
+  imagesImported: number;
+  imagesRemaining: number;
 };
 
 /** Clé de liaison site ↔ caisse : code-barres, sinon réf. fournisseur, sinon id Hiboutik. */
@@ -231,9 +235,6 @@ async function createMissingProducts(
     const raw = source as unknown as NamedRow;
     const desc =
       typeof source.product_desc === "string" ? source.product_desc.trim() : "";
-    const images = (details?.images ?? [])
-      .map((img) => img?.url?.trim())
-      .filter((url): url is string => Boolean(url));
     const brandId = await ensureBrand(
       brandNames.get(Number(raw.product_brand)) ?? "Les P'tits Bonheurs",
     );
@@ -254,7 +255,7 @@ async function createMissingProducts(
           description: desc,
           price,
           salePrice: discount > 0 && discount < price ? discount : null,
-          images,
+          images: [],
           stock: Math.max(0, stockById.get(p.product_id) ?? 0),
           status: "DRAFT",
           isNew: true,
@@ -272,11 +273,114 @@ async function createMissingProducts(
   return created;
 }
 
+const MAX_IMPORTED_IMAGES = 6;
+// Nombre max de produits dont on importe les photos par synchronisation
+// (limite le temps d'exécution serverless ; relancer la synchro pour la suite).
+const IMAGE_PRODUCTS_PER_RUN = 12;
+const IMAGE_CONCURRENCY = 4;
+
+/** Les URLs d'images Hiboutik exigent l'authentification : on télécharge avec les identifiants. */
+async function downloadHiboutikImage(url: string): Promise<Buffer | null> {
+  try {
+    const token = Buffer.from(
+      `${process.env.HIBOUTIK_USER}:${process.env.HIBOUTIK_API_KEY}`,
+    ).toString("base64");
+    const res = await fetch(url, {
+      headers: { Authorization: `Basic ${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return Buffer.from(await res.arrayBuffer());
+  } catch (error) {
+    console.warn(`[hiboutik] téléchargement image impossible (${url}):`, error);
+    return null;
+  }
+}
+
+async function uploadToCloudinary(buffer: Buffer): Promise<string | null> {
+  try {
+    const cloudinary = getCloudinaryClient();
+    const uploaded = await new Promise<{ secure_url: string }>(
+      (resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: "les-ptits-bonheurs/products", resource_type: "image" },
+          (error, result) => {
+            if (error || !result) {
+              reject(error ?? new Error("Upload failed"));
+              return;
+            }
+            resolve({ secure_url: result.secure_url });
+          },
+        );
+        stream.end(buffer);
+      },
+    );
+    return uploaded.secure_url;
+  } catch (error) {
+    console.warn("[hiboutik] upload Cloudinary impossible:", error);
+    return null;
+  }
+}
+
+/** Récupère les grandes photos (big_*) d'un produit Hiboutik et les copie sur Cloudinary. */
+async function importProductImages(hiboutikId: number): Promise<string[]> {
+  const details = await getHiboutikProductDetails(hiboutikId);
+  const all = (details?.images ?? []).filter((img) => Boolean(img?.url));
+  const big = all.filter((img) => !(img.image_name ?? "").startsWith("mini_"));
+  const chosen = (big.length > 0 ? big : all).slice(0, MAX_IMPORTED_IMAGES);
+
+  const urls: string[] = [];
+  for (const img of chosen) {
+    const buffer = await downloadHiboutikImage(img.url!);
+    if (!buffer) continue;
+    const uploaded = await uploadToCloudinary(buffer);
+    if (uploaded) urls.push(uploaded);
+  }
+  return urls;
+}
+
+/** Importe les photos des produits Hiboutik du site qui n'en ont pas encore. */
+async function backfillImages(
+  byKey: Map<string, HiboutikProduct>,
+): Promise<{ imported: number; remaining: number }> {
+  const candidates = (
+    await prisma.product.findMany({
+      where: { sku: { not: null } },
+      select: { id: true, sku: true, images: true },
+    })
+  ).filter((p) => Array.isArray(p.images) && p.images.length === 0);
+
+  const batch = candidates.slice(0, IMAGE_PRODUCTS_PER_RUN);
+  let imported = 0;
+
+  for (let i = 0; i < batch.length; i += IMAGE_CONCURRENCY) {
+    const chunk = batch.slice(i, i + IMAGE_CONCURRENCY);
+    await Promise.all(
+      chunk.map(async (sp) => {
+        const hp = byKey.get(norm(sp.sku));
+        if (!hp) return;
+        const urls = await importProductImages(hp.product_id);
+        if (urls.length === 0) return;
+        await prisma.product.update({
+          where: { id: sp.id },
+          data: { images: urls },
+        });
+        imported++;
+      }),
+    );
+  }
+
+  return { imported, remaining: Math.max(0, candidates.length - batch.length) };
+}
+
 /**
- * Hiboutik → site : crée les nouveaux produits puis recopie le stock
- * (tous entrepôts cumulés) sur les produits existants.
+ * Hiboutik → site : crée les nouveaux produits, recopie le stock
+ * (tous entrepôts cumulés) et, si demandé, importe les photos.
+ * `withImages` reste désactivé pour le webhook (réponse rapide).
  */
-export async function syncStockFromHiboutik(): Promise<HiboutikSyncReport> {
+export async function syncStockFromHiboutik(
+  options: { withImages?: boolean } = {},
+): Promise<HiboutikSyncReport> {
   const [products, stockRows] = await Promise.all([
     listHiboutikProducts(),
     hiboutik<HiboutikStockRow[]>("/stock_available/all_wh"),
@@ -303,15 +407,7 @@ export async function syncStockFromHiboutik(): Promise<HiboutikSyncReport> {
 
   // Hiboutik ne renvoie pas de niveaux de stock pour ce compte/warehouse =>
   // on ne doit pas écraser les stocks du site à 0 en l'absence de donnée.
-  if (!Array.isArray(stockRows) || stockRows.length === 0) {
-    return {
-      hiboutikProducts: products.length,
-      created,
-      matched: 0,
-      updated: 0,
-      unmatchedSiteSkus: [],
-    };
-  }
+  const hasStockData = Array.isArray(stockRows) && stockRows.length > 0;
 
   const siteProducts = await prisma.product.findMany({
     where: { sku: { not: null } },
@@ -330,7 +426,7 @@ export async function syncStockFromHiboutik(): Promise<HiboutikSyncReport> {
     }
     matched++;
     // Produit sans gestion de stock côté caisse : on ne touche pas au site.
-    if (hp.product_stock_management === 0) continue;
+    if (!hasStockData || hp.product_stock_management === 0) continue;
     const stock = Math.max(0, stockById.get(hp.product_id) ?? 0);
     if (stock !== sp.stock) {
       await prisma.product.update({ where: { id: sp.id }, data: { stock } });
@@ -338,12 +434,18 @@ export async function syncStockFromHiboutik(): Promise<HiboutikSyncReport> {
     }
   }
 
+  const images = options.withImages
+    ? await backfillImages(byKey)
+    : { imported: 0, remaining: 0 };
+
   return {
     hiboutikProducts: products.length,
     created,
     matched,
     updated,
     unmatchedSiteSkus,
+    imagesImported: images.imported,
+    imagesRemaining: images.remaining,
   };
 }
 

@@ -16,6 +16,7 @@ import {
 import { UncheckAllButton } from "@/components/admin/uncheck-all-button";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const SEARCH_PAGE_SIZE = 20;
 const CATEGORY_PAGE_SIZE = 500;

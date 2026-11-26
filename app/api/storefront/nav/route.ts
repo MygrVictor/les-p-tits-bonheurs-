@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export const dynamic = "force-dynamic";
+// Réponse mise en cache 5 min (régénérée en arrière-plan) : inutile de
+// relire le catalogue à chaque appel pour une liste de marques par catégorie.
+export const revalidate = 300;
 
 export async function GET() {
   const categories = await prisma.category.findMany({
@@ -9,6 +11,8 @@ export async function GET() {
     include: {
       products: {
         where: { status: "ACTIVE" },
+        // Une ligne par marque et non plus une par produit.
+        distinct: ["brandId"],
         select: {
           brand: {
             select: {

@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateCatalog } from "@/lib/catalog-cache";
 import { auth } from "@/lib/auth";
 import { isHiboutikConfigured, syncStockFromHiboutik } from "@/lib/hiboutik";
 
@@ -18,7 +18,7 @@ export async function syncHiboutikAction(
   }
   try {
     const r = await syncStockFromHiboutik({ withImages: true });
-    revalidatePath("/", "layout");
+    revalidateCatalog();
     const missing = r.unmatchedSiteSkus.length
       ? ` — ${r.unmatchedSiteSkus.length} réf. absentes de la caisse (${r.unmatchedSiteSkus.slice(0, 5).join(", ")}${r.unmatchedSiteSkus.length > 5 ? "…" : ""})`
       : "";

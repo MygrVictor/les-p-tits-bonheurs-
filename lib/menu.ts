@@ -36,20 +36,8 @@ export const storefrontMainMenu: MainMenuItem[] = [
             href: "/categorie/bijouterie-acier-inoxydable",
           },
           {
-            label: "Boucles d'oreilles",
-            href: "/categorie/bijouterie-acier-inoxydable?type=boucles",
-          },
-          {
-            label: "Bracelets",
-            href: "/categorie/bijouterie-acier-inoxydable?type=bracelet",
-          },
-          {
-            label: "Colliers",
-            href: "/categorie/bijouterie-acier-inoxydable?type=collier",
-          },
-          {
-            label: "Bagues",
-            href: "/categorie/bijouterie-acier-inoxydable?type=bagues",
+            label: "Argenté",
+            href: "/categorie/bijouterie-acier-inoxydable-argente",
           },
           {
             label: "Boîtes à bijoux",
@@ -58,24 +46,62 @@ export const storefrontMainMenu: MainMenuItem[] = [
         ],
       },
       {
+        title: "Acier doré",
+        links: [
+          { label: "Voir tout", href: "/categorie/bijouterie-acier-inoxydable-dore" },
+          {
+            label: "Bracelets",
+            href: "/categorie/bijouterie-acier-inoxydable-dore-bracelets",
+          },
+          {
+            label: "Colliers",
+            href: "/categorie/bijouterie-acier-inoxydable-dore-colliers",
+          },
+          {
+            label: "Boucles d'oreilles",
+            href: "/categorie/bijouterie-acier-inoxydable-dore-boucles-d-oreilles",
+          },
+          {
+            label: "Bagues",
+            href: "/categorie/bijouterie-acier-inoxydable-dore-bagues",
+          },
+          {
+            label: "Chevillières",
+            href: "/categorie/bijouterie-acier-inoxydable-dore-chevillieres",
+          },
+          {
+            label: "Ear cuff",
+            href: "/categorie/bijouterie-acier-inoxydable-dore-ear-cuff",
+          },
+        ],
+      },
+      {
         title: "Plaqué Or",
         links: [
           { label: "Voir tout", href: "/categorie/bijouterie-plaque-or" },
           {
-            label: "Boucles d'oreilles",
-            href: "/categorie/bijouterie-plaque-or?type=boucles",
-          },
-          {
             label: "Bracelets",
-            href: "/categorie/bijouterie-plaque-or?type=bracelet",
+            href: "/categorie/bijouterie-plaque-or-bracelets",
           },
           {
             label: "Colliers",
-            href: "/categorie/bijouterie-plaque-or?type=collier",
+            href: "/categorie/bijouterie-plaque-or-colliers",
+          },
+          {
+            label: "Boucles d'oreilles",
+            href: "/categorie/bijouterie-plaque-or-boucles-d-oreilles",
           },
           {
             label: "Bagues",
-            href: "/categorie/bijouterie-plaque-or?type=bagues",
+            href: "/categorie/bijouterie-plaque-or-bagues",
+          },
+          {
+            label: "Chevillières",
+            href: "/categorie/bijouterie-plaque-or-chevillieres",
+          },
+          {
+            label: "Ear cuff",
+            href: "/categorie/bijouterie-plaque-or-ear-cuff",
           },
           {
             label: "Boîtes à bijoux",

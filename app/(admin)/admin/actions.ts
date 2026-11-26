@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateCatalog } from "@/lib/catalog-cache";
 import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -131,6 +132,7 @@ export async function createCategory(formData: FormData) {
 
   revalidatePath("/admin/categories");
   revalidatePath("/admin/produits/nouveau");
+  revalidateCatalog();
 }
 
 export async function updateCategory(categoryId: string, formData: FormData) {
@@ -155,6 +157,7 @@ export async function updateCategory(categoryId: string, formData: FormData) {
 
   revalidatePath("/admin/categories");
   revalidatePath("/admin/produits/nouveau");
+  revalidateCatalog();
 }
 
 export async function deleteCategory(categoryId: string) {
@@ -176,6 +179,7 @@ export async function deleteCategory(categoryId: string) {
 
   revalidatePath("/admin/categories");
   revalidatePath("/admin/produits/nouveau");
+  revalidateCatalog();
 }
 
 export async function createBrand(formData: FormData) {
@@ -199,6 +203,7 @@ export async function createBrand(formData: FormData) {
   revalidatePath("/admin/marques");
   revalidatePath("/admin/produits");
   revalidatePath("/admin/produits/nouveau");
+  revalidateCatalog();
 }
 
 export async function updateBrand(brandId: string, formData: FormData) {
@@ -223,6 +228,7 @@ export async function updateBrand(brandId: string, formData: FormData) {
   revalidatePath("/admin/marques");
   revalidatePath("/admin/produits");
   revalidatePath("/admin/produits/nouveau");
+  revalidateCatalog();
 }
 
 export async function deleteBrand(brandId: string) {
@@ -242,6 +248,7 @@ export async function deleteBrand(brandId: string) {
   revalidatePath("/admin/marques");
   revalidatePath("/admin/produits");
   revalidatePath("/admin/produits/nouveau");
+  revalidateCatalog();
 }
 
 export async function createProduct(formData: FormData) {
@@ -386,6 +393,7 @@ export async function createProduct(formData: FormData) {
 
   revalidatePath("/admin/produits");
   revalidatePath(`/produit/${createdProduct.slug}`);
+  revalidateCatalog();
   redirect(`/produit/${createdProduct.slug}`);
 }
 
@@ -407,6 +415,7 @@ export async function updateProductStock(
   });
 
   revalidatePath("/admin/produits");
+  revalidateCatalog();
 }
 
 /**
@@ -444,6 +453,7 @@ export async function saveProductStatuses(formData: FormData) {
 
   revalidatePath("/admin/produits");
   revalidatePath("/");
+  revalidateCatalog();
 }
 
 export async function updateProduct(productId: string, formData: FormData) {
@@ -515,6 +525,7 @@ export async function updateProduct(productId: string, formData: FormData) {
 
   revalidatePath("/admin/produits");
   revalidatePath(`/admin/produits/${productId}/modifier`);
+  revalidateCatalog();
   redirect("/admin/produits");
 }
 
@@ -557,6 +568,7 @@ export async function deleteProduct(productId: string) {
 
   revalidatePath("/admin/produits");
   revalidatePath("/");
+  revalidateCatalog();
   redirect("/admin/produits");
 }
 

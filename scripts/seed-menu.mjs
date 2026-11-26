@@ -11,7 +11,14 @@ const categoryTree = [
     name: "Bijouterie",
     slug: "bijouterie",
     children: [
-      { name: "Acier inoxydable", slug: "bijouterie-acier-inoxydable" },
+      {
+        name: "Acier inoxydable",
+        slug: "bijouterie-acier-inoxydable",
+        children: [
+          { name: "Argenté", slug: "bijouterie-acier-inoxydable-argente" },
+          { name: "Doré", slug: "bijouterie-acier-inoxydable-dore" },
+        ],
+      },
       { name: "Plaqué Or", slug: "bijouterie-plaque-or" },
     ],
   },
@@ -91,12 +98,25 @@ for (const root of categoryTree) {
   categoryCount += 1;
 
   for (const child of root.children ?? []) {
-    await prisma.category.upsert({
+    const childRow = await prisma.category.upsert({
       where: { slug: child.slug },
       update: { name: child.name, parentId: parent.id },
       create: { name: child.name, slug: child.slug, parentId: parent.id },
     });
     categoryCount += 1;
+
+    for (const grandChild of child.children ?? []) {
+      await prisma.category.upsert({
+        where: { slug: grandChild.slug },
+        update: { name: grandChild.name, parentId: childRow.id },
+        create: {
+          name: grandChild.name,
+          slug: grandChild.slug,
+          parentId: childRow.id,
+        },
+      });
+      categoryCount += 1;
+    }
   }
 }
 

@@ -8,34 +8,27 @@ import {
   type FilterGroup,
 } from "@/components/store/category-filters";
 import { productFilterSchema, slugSchema } from "@/lib/validations/catalog";
-import { prisma } from "@/lib/prisma";
-import {
-  getCategoryFilterConfig,
-  detectGroupValue,
-} from "@/lib/category-filters";
+import { getCategoryFilterConfig } from "@/lib/category-filters";
 import { PRODUCT_COLORS } from "@/lib/colors";
+import { getCategoryListing, getCategoryName } from "@/lib/category-listing";
 
-export const dynamic = "force-dynamic";
-
-const PAGE_SIZE = 20;
+// Rendu à la demande (les filtres passent par l'URL), mais les requêtes
+// catalogue sont mises en cache (voir lib/catalog-cache.ts).
 
 export async function generateMetadata({
   params,
 }: {
   params: { slug: string };
 }): Promise<Metadata> {
-  const category = await prisma.category.findUnique({
-    where: { slug: params.slug },
-    select: { name: true },
-  });
+  const name = await getCategoryName(params.slug);
 
-  if (!category) return { title: "Catégorie introuvable" };
+  if (!name) return { title: "Catégorie introuvable" };
 
   return {
-    title: `${category.name} — Les P'tits Bonheurs`,
-    description: `Découvrez notre sélection ${category.name.toLowerCase()} : bijoux, mode et accessoires artisanaux. Livraison rapide en France et en Europe.`,
+    title: `${name} — Les P'tits Bonheurs`,
+    description: `Découvrez notre sélection ${name.toLowerCase()} : bijoux, mode et accessoires artisanaux. Livraison rapide en France et en Europe.`,
     openGraph: {
-      title: `${category.name} — Les P'tits Bonheurs`,
+      title: `${name} — Les P'tits Bonheurs`,
       type: "website",
     },
   };
@@ -52,18 +45,10 @@ function toParamArray(value: string | string[] | undefined): string[] {
     .filter(Boolean);
 }
 
-export function generateStaticParams() {
-  return [];
-}
-
-function toStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value.filter((entry): entry is string => typeof entry === "string");
-}
-
-function isWithinNewWindow(createdAt: Date, days = 90): boolean {
-  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-  return createdAt.getTime() >= cutoff;
+function toPrice(value: string | string[] | undefined): number | null {
+  if (typeof value !== "string") return null;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
 export default async function CategoryPage({
@@ -78,24 +63,11 @@ export default async function CategoryPage({
     notFound();
   }
 
-  const category = await prisma.category.findUnique({
-    where: { slug: safeParams.data.slug },
-    include: {
-      parent: { select: { id: true, slug: true, name: true } },
-      children: { select: { id: true } },
-    },
-  });
-
-  if (!category) {
-    notFound();
-  }
-
-  const categoryIds = [category.id, ...category.children.map((c) => c.id)];
-  const isColorHub = category.slug === "couleurs";
-  const filterConfig = getCategoryFilterConfig(category);
-
   const resolvedSearch = searchParams ?? {};
-  const page = Math.max(1, parseInt(String(resolvedSearch.page ?? "1"), 10));
+  const page = Math.max(
+    1,
+    parseInt(String(resolvedSearch.page ?? "1"), 10) || 1,
+  );
 
   const filterResult = productFilterSchema.safeParse({
     category: safeParams.data.slug,
@@ -113,246 +85,44 @@ export default async function CategoryPage({
       typeof resolvedSearch.sort === "string" ? resolvedSearch.sort : "newest",
   });
 
-  const selectedBrandsEarly = toParamArray(resolvedSearch.brand);
-  const rawSelectedColorEarly =
-    typeof resolvedSearch.couleur === "string"
-      ? resolvedSearch.couleur
-      : undefined;
-  const parsedPriceMin =
-    typeof resolvedSearch.prixMin === "string"
-      ? Number.parseInt(resolvedSearch.prixMin, 10)
-      : Number.NaN;
-  const parsedPriceMax =
-    typeof resolvedSearch.prixMax === "string"
-      ? Number.parseInt(resolvedSearch.prixMax, 10)
-      : Number.NaN;
-  const selectedMinPriceEarly =
-    Number.isFinite(parsedPriceMin) && parsedPriceMin >= 0
-      ? parsedPriceMin
-      : null;
-  const selectedMaxPriceEarly =
-    Number.isFinite(parsedPriceMax) && parsedPriceMax >= 0
-      ? parsedPriceMax
-      : null;
-
-  const baseWhere = isColorHub
-    ? { status: "ACTIVE" as const, color: { not: null } }
-    : { categoryId: { in: categoryIds }, status: "ACTIVE" as const };
-
-  const productBaseWhere = {
-    ...baseWhere,
-    ...(selectedBrandsEarly.length > 0
-      ? { brandId: { in: selectedBrandsEarly } }
-      : {}),
-    ...(isColorHub && rawSelectedColorEarly
-      ? { color: rawSelectedColorEarly }
-      : {}),
-  };
-
-  const priceStats = await prisma.product.aggregate({
-    where: productBaseWhere,
-    _min: { price: true },
-    _max: { price: true },
+  const listing = await getCategoryListing({
+    slug: safeParams.data.slug,
+    page,
+    brands: toParamArray(resolvedSearch.brand),
+    color:
+      typeof resolvedSearch.couleur === "string"
+        ? resolvedSearch.couleur
+        : null,
+    minPrice: toPrice(resolvedSearch.prixMin),
+    maxPrice: toPrice(resolvedSearch.prixMax),
+    groups: {
+      type: typeof resolvedSearch.type === "string" ? resolvedSearch.type : null,
+      pieces:
+        typeof resolvedSearch.pieces === "string"
+          ? resolvedSearch.pieces
+          : null,
+    },
   });
 
-  const availableMinPrice =
-    typeof priceStats._min.price === "number"
-      ? Math.floor(priceStats._min.price / 100)
-      : null;
-  const availableMaxPrice =
-    typeof priceStats._max.price === "number"
-      ? Math.ceil(priceStats._max.price / 100)
-      : null;
-
-  const clampedMinPrice =
-    selectedMinPriceEarly !== null && availableMinPrice !== null
-      ? Math.max(availableMinPrice, selectedMinPriceEarly)
-      : selectedMinPriceEarly;
-  const clampedMaxPrice =
-    selectedMaxPriceEarly !== null && availableMaxPrice !== null
-      ? Math.min(availableMaxPrice, selectedMaxPriceEarly)
-      : selectedMaxPriceEarly;
-
-  const safeSelectedMinPrice =
-    clampedMinPrice !== null && clampedMaxPrice !== null
-      ? Math.min(clampedMinPrice, clampedMaxPrice)
-      : clampedMinPrice;
-  const safeSelectedMaxPrice =
-    clampedMinPrice !== null && clampedMaxPrice !== null
-      ? Math.max(clampedMinPrice, clampedMaxPrice)
-      : clampedMaxPrice;
-
-  const productWhere = {
-    ...productBaseWhere,
-    ...(safeSelectedMinPrice !== null || safeSelectedMaxPrice !== null
-      ? {
-          price: {
-            ...(safeSelectedMinPrice !== null
-              ? { gte: safeSelectedMinPrice * 100 }
-              : {}),
-            ...(safeSelectedMaxPrice !== null
-              ? { lte: safeSelectedMaxPrice * 100 }
-              : {}),
-          },
-        }
-      : {}),
-  };
-
-  const [rawProducts, totalProducts, rawBrands] = await Promise.all([
-    prisma.product.findMany({
-      where: productWhere,
-      select: {
-        id: true,
-        slug: true,
-        name: true,
-        description: true,
-        price: true,
-        salePrice: true,
-        images: true,
-        stock: true,
-        status: true,
-        isNew: true,
-        tags: true,
-        brandId: true,
-        categoryId: true,
-        color: true,
-        createdAt: true,
-        variants: {
-          select: {
-            id: true,
-            productId: true,
-            name: true,
-            value: true,
-            stock: true,
-            price: true,
-          },
-          take: 3,
-        },
-      },
-      orderBy: { createdAt: "desc" },
-      take: PAGE_SIZE,
-      skip: (page - 1) * PAGE_SIZE,
-    }),
-    prisma.product.count({ where: productWhere }),
-    prisma.brand.findMany({
-      where: {
-        products: {
-          some: productWhere,
-        },
-      },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true },
-    }),
-  ]);
-
-  const totalPages = Math.ceil(totalProducts / PAGE_SIZE);
-
-  const products = rawProducts.map((product) => {
-    const images = toStringArray(product.images);
-    const tags = toStringArray(product.tags);
-
-    return {
-      id: product.slug,
-      name: product.name,
-      description: product.description,
-      price: product.price / 100,
-      salePrice: product.salePrice ? product.salePrice / 100 : null,
-      brandId: product.brandId,
-      categoryId: product.categoryId,
-      color: product.color,
-      images:
-        images.length > 0
-          ? images
-          : [
-              "https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=1200&q=80",
-            ],
-      stock: product.stock,
-      status: (product.status === "ACTIVE"
-        ? "active"
-        : product.status === "ARCHIVED"
-          ? "inactive"
-          : "new") as "active" | "inactive" | "new",
-      isNew: product.isNew && isWithinNewWindow(product.createdAt, 90),
-      tags,
-      variants: product.variants.map((variant) => ({
-        id: variant.id,
-        productId: variant.productId,
-        name: variant.name,
-        value: variant.value,
-        stock: variant.stock,
-        price: variant.price ? variant.price / 100 : null,
-      })),
-      stones: [],
-    };
-  });
-
-  const selectedGroupValues: Record<string, string | null> = {};
-  if (filterConfig) {
-    for (const group of filterConfig.groups) {
-      const raw = resolvedSearch[group.paramName];
-      const value = typeof raw === "string" ? raw : undefined;
-      selectedGroupValues[group.paramName] =
-        value && group.options.some((option) => option.id === value)
-          ? value
-          : null;
-    }
+  if (!listing) {
+    notFound();
   }
 
-  const availableColorIds = isColorHub
-    ? Array.from(
-        new Set(
-          products.map((p) => p.color).filter((c): c is string => Boolean(c)),
-        ),
-      )
-    : [];
+  const { category, totalPages } = listing;
+  const isColorHub = category.slug === "couleurs";
+  const filterConfig = getCategoryFilterConfig(category);
+  const filteredProducts = listing.products;
+  const selectedGroupValues = listing.selectedGroupValues;
+  const selectedColor = listing.selectedColor;
+  const selectedBrands = toParamArray(resolvedSearch.brand);
+  const selectedMinPrice = listing.selectedMinPrice;
+  const selectedMaxPrice = listing.selectedMaxPrice;
+  const availableMinPrice = listing.availableMinPrice;
+  const availableMaxPrice = listing.availableMaxPrice;
+  const brandOptions = listing.brandOptions;
   const colorOptions = PRODUCT_COLORS.filter((c) =>
-    availableColorIds.includes(c.id),
+    listing.availableColorIds.includes(c.id),
   );
-  const selectedColor =
-    isColorHub &&
-    rawSelectedColorEarly &&
-    availableColorIds.includes(rawSelectedColorEarly)
-      ? rawSelectedColorEarly
-      : null;
-
-  const selectedBrands = selectedBrandsEarly;
-  const selectedMinPrice = safeSelectedMinPrice;
-  const selectedMaxPrice = safeSelectedMaxPrice;
-
-  const brandOptions = rawBrands.map((brand) => ({
-    id: brand.id,
-    name: brand.name,
-  }));
-
-  const filteredProducts = products.filter((product) => {
-    const effectivePrice = product.salePrice ?? product.price;
-
-    const matchesGroups = filterConfig
-      ? filterConfig.groups.every((group) => {
-          const selected = selectedGroupValues[group.paramName];
-          if (!selected) return true;
-          return detectGroupValue(product, group) === selected;
-        })
-      : true;
-
-    const matchesColor = selectedColor ? product.color === selectedColor : true;
-    const matchesBrand =
-      selectedBrands.length === 0
-        ? true
-        : selectedBrands.includes(product.brandId);
-    const matchesMinPrice =
-      selectedMinPrice === null ? true : effectivePrice >= selectedMinPrice;
-    const matchesMaxPrice =
-      selectedMaxPrice === null ? true : effectivePrice <= selectedMaxPrice;
-
-    return (
-      matchesGroups &&
-      matchesColor &&
-      matchesBrand &&
-      matchesMinPrice &&
-      matchesMaxPrice
-    );
-  });
 
   const filterGroups: FilterGroup[] = (filterConfig?.groups ?? []).map(
     (group) => ({

@@ -5,8 +5,9 @@ import { SafeImage } from "@/components/ui/image";
 import { QuickAddToCart } from "@/components/store/quick-add-to-cart";
 import { CategoryFilters } from "@/components/store/category-filters";
 import type { Product } from "@/lib/catalog";
+import { cachedCatalog } from "@/lib/catalog-cache";
 
-export const dynamic = "force-dynamic";
+// Rendu à la demande (filtres dans l'URL) ; requêtes mises en cache.
 
 export const metadata: Metadata = {
   title: "Nouveautés — Les P'tits Bonheurs",
@@ -31,6 +32,125 @@ function toParamArray(value: string | string[] | undefined): string[] {
     .filter(Boolean);
 }
 
+const getNewArrivals = cachedCatalog(
+  "nouveautes",
+  async (
+    selectedBrands: string[],
+    selectedMinPriceRaw: number | null,
+    selectedMaxPriceRaw: number | null,
+  ) => {
+    const productBaseWhere = {
+      status: "ACTIVE" as const,
+      isNew: true,
+      ...(selectedBrands.length > 0 ? { brandId: { in: selectedBrands } } : {}),
+    };
+
+    const priceStats = await prisma.product.aggregate({
+      where: productBaseWhere,
+      _min: { price: true },
+      _max: { price: true },
+    });
+
+    const availableMinPrice =
+      typeof priceStats._min.price === "number"
+        ? Math.floor(priceStats._min.price / 100)
+        : null;
+    const availableMaxPrice =
+      typeof priceStats._max.price === "number"
+        ? Math.ceil(priceStats._max.price / 100)
+        : null;
+
+    const clampedMinPrice =
+      selectedMinPriceRaw !== null && availableMinPrice !== null
+        ? Math.max(availableMinPrice, selectedMinPriceRaw)
+        : selectedMinPriceRaw;
+    const clampedMaxPrice =
+      selectedMaxPriceRaw !== null && availableMaxPrice !== null
+        ? Math.min(availableMaxPrice, selectedMaxPriceRaw)
+        : selectedMaxPriceRaw;
+
+    const selectedMinPrice =
+      clampedMinPrice !== null && clampedMaxPrice !== null
+        ? Math.min(clampedMinPrice, clampedMaxPrice)
+        : clampedMinPrice;
+    const selectedMaxPrice =
+      clampedMinPrice !== null && clampedMaxPrice !== null
+        ? Math.max(clampedMinPrice, clampedMaxPrice)
+        : clampedMaxPrice;
+
+    const productWhere = {
+      ...productBaseWhere,
+      ...(selectedMinPrice !== null || selectedMaxPrice !== null
+        ? {
+            price: {
+              ...(selectedMinPrice !== null
+                ? { gte: selectedMinPrice * 100 }
+                : {}),
+              ...(selectedMaxPrice !== null
+                ? { lte: selectedMaxPrice * 100 }
+                : {}),
+            },
+          }
+        : {}),
+    };
+
+    const [dbProducts, rawBrands] = await Promise.all([
+      prisma.product.findMany({
+        where: productWhere,
+        include: { variants: true },
+        orderBy: { createdAt: "desc" },
+        take: 40,
+      }),
+      prisma.brand.findMany({
+        where: {
+          products: {
+            some: productBaseWhere,
+          },
+        },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true },
+      }),
+    ]);
+
+    const products: Product[] = dbProducts.map((product) => {
+      const images = toStringArray(product.images);
+      return {
+        id: product.slug,
+        name: product.name,
+        description: product.description,
+        price: product.price / 100,
+        salePrice: product.salePrice ? product.salePrice / 100 : null,
+        brandId: product.brandId,
+        categoryId: product.categoryId,
+        images: images.length > 0 ? images : [FALLBACK_IMAGE],
+        stock: product.stock,
+        status: "new" as const,
+        isNew: true,
+        tags: toStringArray(product.tags),
+        featured: false,
+        variants: product.variants.map((variant) => ({
+          id: variant.id,
+          productId: variant.productId,
+          name: variant.name,
+          value: variant.value,
+          stock: variant.stock,
+          price: variant.price ? variant.price / 100 : null,
+        })),
+        stones: [],
+      };
+    });
+
+    return {
+      products,
+      brandOptions: rawBrands,
+      availableMinPrice,
+      availableMaxPrice,
+      selectedMinPrice,
+      selectedMaxPrice,
+    };
+  },
+);
+
 export default async function NouveautesPage({
   searchParams,
 }: {
@@ -48,121 +168,22 @@ export default async function NouveautesPage({
       ? Number.parseInt(resolvedSearch.prixMax, 10)
       : Number.NaN;
 
-  const selectedMinPriceRaw =
+  const {
+    products,
+    brandOptions,
+    availableMinPrice,
+    availableMaxPrice,
+    selectedMinPrice,
+    selectedMaxPrice,
+  } = await getNewArrivals(
+    selectedBrands,
     Number.isFinite(parsedPriceMin) && parsedPriceMin >= 0
       ? parsedPriceMin
-      : null;
-  const selectedMaxPriceRaw =
+      : null,
     Number.isFinite(parsedPriceMax) && parsedPriceMax >= 0
       ? parsedPriceMax
-      : null;
-
-  const productBaseWhere = {
-    status: "ACTIVE" as const,
-    isNew: true,
-    ...(selectedBrands.length > 0 ? { brandId: { in: selectedBrands } } : {}),
-  };
-
-  const priceStats = await prisma.product.aggregate({
-    where: productBaseWhere,
-    _min: { price: true },
-    _max: { price: true },
-  });
-
-  const availableMinPrice =
-    typeof priceStats._min.price === "number"
-      ? Math.floor(priceStats._min.price / 100)
-      : null;
-  const availableMaxPrice =
-    typeof priceStats._max.price === "number"
-      ? Math.ceil(priceStats._max.price / 100)
-      : null;
-
-  const clampedMinPrice =
-    selectedMinPriceRaw !== null && availableMinPrice !== null
-      ? Math.max(availableMinPrice, selectedMinPriceRaw)
-      : selectedMinPriceRaw;
-  const clampedMaxPrice =
-    selectedMaxPriceRaw !== null && availableMaxPrice !== null
-      ? Math.min(availableMaxPrice, selectedMaxPriceRaw)
-      : selectedMaxPriceRaw;
-
-  const selectedMinPrice =
-    clampedMinPrice !== null && clampedMaxPrice !== null
-      ? Math.min(clampedMinPrice, clampedMaxPrice)
-      : clampedMinPrice;
-  const selectedMaxPrice =
-    clampedMinPrice !== null && clampedMaxPrice !== null
-      ? Math.max(clampedMinPrice, clampedMaxPrice)
-      : clampedMaxPrice;
-
-  const productWhere = {
-    ...productBaseWhere,
-    ...(selectedMinPrice !== null || selectedMaxPrice !== null
-      ? {
-          price: {
-            ...(selectedMinPrice !== null
-              ? { gte: selectedMinPrice * 100 }
-              : {}),
-            ...(selectedMaxPrice !== null
-              ? { lte: selectedMaxPrice * 100 }
-              : {}),
-          },
-        }
-      : {}),
-  };
-
-  const [dbProducts, rawBrands] = await Promise.all([
-    prisma.product.findMany({
-      where: productWhere,
-      include: { variants: true },
-      orderBy: { createdAt: "desc" },
-      take: 40,
-    }),
-    prisma.brand.findMany({
-      where: {
-        products: {
-          some: productBaseWhere,
-        },
-      },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true },
-    }),
-  ]);
-
-  const brandOptions = rawBrands.map((brand) => ({
-    id: brand.id,
-    name: brand.name,
-  }));
-
-  const products: Product[] = dbProducts.map((product) => {
-    const images = toStringArray(product.images);
-    return {
-      id: product.slug,
-      name: product.name,
-      description: product.description,
-      price: product.price / 100,
-      salePrice: product.salePrice ? product.salePrice / 100 : null,
-      brandId: product.brandId,
-      categoryId: product.categoryId,
-      images: images.length > 0 ? images : [FALLBACK_IMAGE],
-      stock: product.stock,
-      status: "new" as const,
-      isNew: true,
-      tags: toStringArray(product.tags),
-      featured: false,
-      createdAt: product.createdAt,
-      variants: product.variants.map((variant) => ({
-        id: variant.id,
-        productId: variant.productId,
-        name: variant.name,
-        value: variant.value,
-        stock: variant.stock,
-        price: variant.price ? variant.price / 100 : null,
-      })),
-      stones: [],
-    };
-  });
+      : null,
+  );
 
   return (
     <section className="space-y-8">

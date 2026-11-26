@@ -1,6 +1,7 @@
+import { cache } from "react";
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import type { Metadata } from "next";
+import { SafeImage } from "@/components/ui/image";
 import { getProductById } from "@/lib/catalog";
 import { slugSchema } from "@/lib/validations/catalog";
 import { prisma } from "@/lib/prisma";
@@ -8,7 +9,28 @@ import { AddToCartActions } from "@/components/store/add-to-cart";
 import { WishlistButton } from "@/components/store/wishlist-button";
 import { ProductReviews } from "@/components/store/product-reviews";
 
-export const dynamic = "force-dynamic";
+// ISR : page servie depuis le cache, régénérée au plus toutes les 5 min et
+// immédiatement après une synchro Hiboutik / une édition admin
+// (revalidateCatalog). Le stock est de toute façon revérifié au paiement.
+export const revalidate = 300;
+
+export function generateStaticParams() {
+  return [];
+}
+
+/** Une seule requête par rendu, partagée entre generateMetadata et la page. */
+const findActiveProduct = cache((slug: string) =>
+  prisma.product.findFirst({
+    where: {
+      OR: [{ slug }, { id: slug }],
+      status: "ACTIVE",
+    },
+    include: {
+      brand: { select: { name: true } },
+      category: { select: { name: true } },
+    },
+  }),
+);
 
 function toStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
@@ -20,19 +42,7 @@ export async function generateMetadata({
 }: {
   params: { slug: string };
 }): Promise<Metadata> {
-  const product = await prisma.product.findFirst({
-    where: {
-      OR: [{ slug: params.slug }, { id: params.slug }],
-      status: "ACTIVE",
-    },
-    select: {
-      name: true,
-      description: true,
-      images: true,
-      price: true,
-      salePrice: true,
-    },
-  });
+  const product = await findActiveProduct(params.slug);
 
   if (!product) return { title: "Produit introuvable" };
 
@@ -65,16 +75,7 @@ export default async function ProductPage({
     notFound();
   }
 
-  const dbProduct = await prisma.product.findFirst({
-    where: {
-      OR: [{ slug: parsed.data.slug }, { id: parsed.data.slug }],
-      status: "ACTIVE",
-    },
-    include: {
-      brand: { select: { name: true } },
-      category: { select: { name: true } },
-    },
-  });
+  const dbProduct = await findActiveProduct(parsed.data.slug);
 
   const staticProduct = getProductById(parsed.data.slug);
   const product =
@@ -112,16 +113,19 @@ export default async function ProductPage({
     <div className="space-y-8">
       <section className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="grid gap-4 sm:grid-cols-2">
-          {product.images.map((image) => (
+          {product.images.map((image, index) => (
             <div
               key={image}
               className="overflow-hidden rounded-3xl bg-white shadow-soft"
             >
-              <Image
+              <SafeImage
                 src={image}
                 alt={product.name}
                 width={900}
                 height={1100}
+                // 1re image = LCP de la page : chargée immédiatement.
+                priority={index === 0}
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 30vw"
                 placeholder="blur"
                 blurDataURL="data:image/gif;base64,R0lGODlhAQABAAAAACw="
                 className="h-full w-full object-cover transition duration-200 hover:scale-105"

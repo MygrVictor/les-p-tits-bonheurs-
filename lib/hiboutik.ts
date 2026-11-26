@@ -162,28 +162,137 @@ async function loadNames(
   const map = new Map<number, string>();
   try {
     const rows = await hiboutik<NamedRow[]>(path);
-    const own = new Map<number, string>();
-    const parentOf = new Map<number, number>();
     for (const r of rows ?? []) {
       const id = Number(r[`${prefix}_id`]);
       const name = String(r[`${prefix}_name`] ?? "").trim();
-      if (!id || !name) continue;
-      own.set(id, name);
-      parentOf.set(id, Number(r[`${prefix}_id_parent`]) || 0);
-    }
-    for (const [id, name] of own) {
-      const parts = [name];
-      let p = parentOf.get(id) ?? 0;
-      for (let i = 0; p && own.has(p) && i < 5; i++) {
-        parts.unshift(own.get(p)!);
-        p = parentOf.get(p) ?? 0;
-      }
-      map.set(id, parts.join(" > "));
+      if (id && name) map.set(id, name);
     }
   } catch (error) {
     console.warn(`[hiboutik] ${path} indisponible:`, error);
   }
   return map;
+}
+
+type HiboutikCategoryNode = { name: string; parent: number };
+
+/** Arbre /categories de Hiboutik : id → { nom, id du parent }. */
+async function loadCategoryNodes(): Promise<Map<number, HiboutikCategoryNode>> {
+  const nodes = new Map<number, HiboutikCategoryNode>();
+  try {
+    const rows = await hiboutik<NamedRow[]>("/categories");
+    for (const r of rows ?? []) {
+      const id = Number(r.category_id);
+      if (!id) continue;
+      nodes.set(id, {
+        name: String(r.category_name ?? "").trim(),
+        parent: Number(r.category_id_parent) || 0,
+      });
+    }
+  } catch (error) {
+    console.warn("[hiboutik] /categories indisponible:", error);
+  }
+  return nodes;
+}
+
+/**
+ * id → [nom, nom du parent, … racine]. Hiboutik a jusqu'à 4 niveaux
+ * (Bijouterie > acier inoxydable > doré > bracelets).
+ */
+function buildCategoryChains(
+  nodes: Map<number, HiboutikCategoryNode>,
+): Map<number, string[]> {
+  const chains = new Map<number, string[]>();
+  for (const [id, node] of nodes) {
+    const chain: string[] = [];
+    let current: HiboutikCategoryNode | undefined = node;
+    for (let i = 0; current && i < 8; i++) {
+      if (current.name) chain.push(current.name);
+      current = current.parent ? nodes.get(current.parent) : undefined;
+    }
+    if (chain.length > 0) chains.set(id, chain);
+  }
+  return chains;
+}
+
+/** Slugs du site différents de celui qu'on déduit du nom Hiboutik. */
+const SITE_SLUG_ALIASES: Record<string, string> = {
+  "jeux-et-diy": "jeux-diy",
+  "jeux-diy-peinture-aux-numero": "jeux-diy-peinture-au-numero",
+  "jeux-diy-carnets-a-aquarelle": "jeux-diy-carnets-aquarelle",
+};
+
+/** « PERLES » / « bagues » → « Perles » / « Bagues » (les noms mixtes sont gardés). */
+function prettyCategoryName(name: string): string {
+  const trimmed = name.trim();
+  const pretty =
+    trimmed === trimmed.toUpperCase() || trimmed === trimmed.toLowerCase()
+      ? trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase()
+      : trimmed;
+  return pretty.replace(/\bdiy\b/gi, "DIY");
+}
+
+/**
+ * Recopie TOUT l'arbre de catégories Hiboutik sur le site (types compris) :
+ * chaque catégorie Hiboutik nommée a sa catégorie du site, au même endroit de
+ * l'arbre (slug = slug du parent + nom). Les catégories existantes sont
+ * réutilisées, jamais renommées ni supprimées ; seules les manquantes sont
+ * créées. Renvoie id Hiboutik → id catégorie du site.
+ */
+export async function ensureSiteCategoryTree(
+  nodes: Map<number, HiboutikCategoryNode>,
+): Promise<{ map: Map<number, string>; created: string[] }> {
+  const existing = await prisma.category.findMany({
+    select: { id: true, slug: true, parentId: true },
+  });
+  const bySlug = new Map(existing.map((c) => [c.slug, c]));
+  const done = new Map<number, { id: string; slug: string } | null>();
+  const created: string[] = [];
+
+  async function resolveNode(
+    id: number,
+    depth = 0,
+  ): Promise<{ id: string; slug: string } | null> {
+    if (done.has(id)) return done.get(id) ?? null;
+    const node = nodes.get(id);
+    if (!node || !node.name || depth > 8) {
+      done.set(id, null);
+      return null;
+    }
+    // Un parent sans nom (catégorie fantôme) est ignoré : on remonte à la racine.
+    const parent = node.parent ? await resolveNode(node.parent, depth + 1) : null;
+    const base = slugify(node.name);
+    if (!base) {
+      done.set(id, null);
+      return null;
+    }
+    const raw = parent ? `${parent.slug}-${base}` : base;
+    const slug = SITE_SLUG_ALIASES[raw] ?? raw;
+
+    let row = bySlug.get(slug);
+    if (!row) {
+      const createdRow = await prisma.category.create({
+        data: {
+          name: prettyCategoryName(node.name),
+          slug,
+          parentId: parent?.id ?? null,
+        },
+        select: { id: true, slug: true, parentId: true },
+      });
+      bySlug.set(slug, createdRow);
+      created.push(slug);
+      row = createdRow;
+    }
+    const result = { id: row.id, slug: row.slug };
+    done.set(id, result);
+    return result;
+  }
+
+  const map = new Map<number, string>();
+  for (const id of nodes.keys()) {
+    const resolved = await resolveNode(id);
+    if (resolved) map.set(id, resolved.id);
+  }
+  return { map, created };
 }
 
 async function ensureBrand(name: string): Promise<string> {
@@ -216,8 +325,7 @@ async function ensureCategory(name: string): Promise<string> {
  * arbre (Bijouterie > Acier inoxydable / Plaqué Or, Perlerie, Jeux & DIY > Puzzles…).
  *
  * Règle : le NOM de la catégorie Hiboutik doit être celui d'une catégorie du site
- * (n'importe quel niveau, sans tenir compte des accents/majuscules). On accepte aussi
- * « Parent > Enfant » : seul le dernier élément compte. Les types (bracelet, collier,
+ * (n'importe quel niveau, sans tenir compte des accents/majuscules). Les types (bracelet, collier,
  * boucles…) ne sont pas des catégories : le filtre « Type » du site les repère dans le
  * nom du produit.
  */
@@ -264,7 +372,7 @@ function typeKeywordsFor(segment: string): string[] {
 
 function typeTag(label: string | undefined): string[] {
   if (!label) return [];
-  return typeKeywordsFor(lastSegment(label));
+  return typeKeywordsFor(label);
 }
 
 function lastSegment(label: string): string {
@@ -299,23 +407,23 @@ function legacySlugFor(
   return null;
 }
 
-/** `direct` = la catégorie Hiboutik porte le nom d'une catégorie du site. */
+/**
+ * `direct` = la catégorie Hiboutik (ou l'un de ses parents) porte le nom d'une
+ * catégorie du site. `chain` = [catégorie du produit, parent, grand-parent…] :
+ * on prend le niveau le plus profond qui existe sur le site.
+ */
 function resolveSiteCategory(
-  hiboutikCategory: string,
+  chain: string[],
   productName: string,
   site: SiteCategories,
 ): { id: string | null; direct: boolean } {
-  const parts = hiboutikCategory
-    .split(/[>/]/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (parts.length >= 2) {
-    const parent = site.byName.get(slugify(parts[parts.length - 2]));
-    if (parent) return { id: parent, direct: true };
+  for (const label of chain) {
+    const direct =
+      site.byName.get(slugify(label)) ??
+      site.byName.get(slugify(lastSegment(label)));
+    if (direct) return { id: direct, direct: true };
   }
-  const direct = site.byName.get(slugify(lastSegment(hiboutikCategory)));
-  if (direct) return { id: direct, direct: true };
-  const slug = legacySlugFor(hiboutikCategory, productName);
+  const slug = legacySlugFor(chain[0] ?? "", productName);
   return { id: slug ? (site.bySlug.get(slug) ?? null) : null, direct: false };
 }
 
@@ -329,7 +437,7 @@ function resolveSiteCategory(
 async function reclassifyProducts(
   byKey: Map<string, HiboutikProduct>,
 ): Promise<{ moved: number; unmapped: string[] }> {
-  const [siteProducts, categoryNames, site] = await Promise.all([
+  const [siteProducts, categoryNodes, site] = await Promise.all([
     prisma.product.findMany({
       where: { sku: { not: null } },
       select: {
@@ -341,9 +449,12 @@ async function reclassifyProducts(
         category: { select: { slug: true } },
       },
     }),
-    loadNames("/categories", "category"),
+    loadCategoryNodes(),
     loadSiteCategories(),
   ]);
+  const chains = buildCategoryChains(categoryNodes);
+  const { map: siteCategoryByHiboutikId } =
+    await ensureSiteCategoryTree(categoryNodes);
 
   let moved = 0;
   const unmapped = new Set<string>();
@@ -351,10 +462,16 @@ async function reclassifyProducts(
   for (const sp of siteProducts) {
     const hp = byKey.get(norm(sp.sku));
     if (!hp) continue;
-    const hiboutikCategory = categoryNames.get(Number(hp.product_category));
-    if (!hiboutikCategory) continue;
+    const hiboutikId = Number(hp.product_category);
+    const chain = chains.get(hiboutikId);
+    const hiboutikCategory = chain?.[0];
+    if (!chain || !hiboutikCategory) continue;
 
-    const { id, direct } = resolveSiteCategory(hiboutikCategory, sp.name, site);
+    // Catégorie du site recopiée de Hiboutik ; sinon ancienne règle (par nom).
+    const mirrored = siteCategoryByHiboutikId.get(hiboutikId);
+    const { id, direct } = mirrored
+      ? { id: mirrored, direct: true }
+      : resolveSiteCategory(chain, sp.name, site);
     if (!id) {
       unmapped.add(hiboutikCategory);
       continue;
@@ -404,10 +521,13 @@ async function createMissingProducts(
   );
   if (toCreate.length === 0) return 0;
 
-  const [brandNames, categoryNames] = await Promise.all([
+  const [brandNames, categoryNodes] = await Promise.all([
     loadNames("/brands", "brand"),
-    loadNames("/categories", "category"),
+    loadCategoryNodes(),
   ]);
+  const categoryNames = buildCategoryChains(categoryNodes);
+  const { map: siteCategoryByHiboutikId } =
+    await ensureSiteCategoryTree(categoryNodes);
 
   let created = 0;
   const siteCategories = await loadSiteCategories();
@@ -422,11 +542,14 @@ async function createMissingProducts(
     const brandId = await ensureBrand(
       brandNames.get(Number(raw.product_brand)) ?? "Les P'tits Bonheurs",
     );
-    const hiboutikCategory = categoryNames.get(Number(raw.product_category));
+    const chain = categoryNames.get(Number(raw.product_category));
+    const hiboutikCategory = chain?.[0];
     const categoryId =
-      (hiboutikCategory
-        ? resolveSiteCategory(hiboutikCategory, name, siteCategories).id
-        : null) ?? (await ensureCategory(hiboutikCategory ?? "À classer"));
+      (siteCategoryByHiboutikId.get(Number(raw.product_category)) ??
+        (chain
+          ? resolveSiteCategory(chain, name, siteCategories).id
+          : null)) ??
+      (await ensureCategory(hiboutikCategory ?? "À classer"));
     const price = Math.round((Number(p.product_price) || 0) * 100);
     const discount = Math.round(
       (Number(raw.product_discount_price) || 0) * 100,
@@ -559,6 +682,90 @@ async function backfillImages(
   return { imported, remaining: Math.max(0, candidates.length - batch.length) };
 }
 
+const STOCK_UPDATE_BATCH = 50;
+
+/** Applique les nouveaux stocks par lots transactionnels (au lieu d'un UPDATE par await). */
+async function applyStockUpdates(
+  updates: { id: string; stock: number }[],
+): Promise<number> {
+  for (let i = 0; i < updates.length; i += STOCK_UPDATE_BATCH) {
+    const chunk = updates.slice(i, i + STOCK_UPDATE_BATCH);
+    await prisma.$transaction(
+      chunk.map((u) =>
+        prisma.product.update({
+          where: { id: u.id },
+          data: { stock: u.stock },
+        }),
+      ),
+    );
+  }
+  return updates.length;
+}
+
+/** Clés possibles d'un produit caisse côté site (même règle que l'index de syncStockFromHiboutik). */
+function hiboutikKeys(p: HiboutikProduct): string[] {
+  return [
+    norm(p.product_barcode),
+    norm(p.product_supplier_reference),
+    `HB-${p.product_id}`,
+  ].filter(Boolean);
+}
+
+/**
+ * Lit les produits d'une vente caisse. Hiboutik renvoie la vente sous forme
+ * de tableau (une ligne) ou d'objet selon les versions : lecture défensive.
+ */
+export async function getHiboutikSaleProductIds(
+  saleId: number,
+): Promise<number[]> {
+  const raw = await hiboutik<unknown>(`/sales/${saleId}`);
+  const sale = (Array.isArray(raw) ? raw[0] : raw) as
+    | { line_items?: { product_id?: number | string }[] }
+    | undefined;
+  const ids = (sale?.line_items ?? [])
+    .map((line) => Number(line.product_id))
+    .filter((id) => Number.isInteger(id) && id > 0);
+  return [...new Set(ids)];
+}
+
+/**
+ * Hiboutik → site, version ciblée : ne recopie le stock QUE des produits
+ * caisse donnés (ceux d'une vente). Quelques appels API au lieu de relire
+ * tout le catalogue à chaque passage en caisse.
+ */
+export async function syncStockForHiboutikProducts(
+  productIds: number[],
+): Promise<{ updated: number }> {
+  const updates: { id: string; stock: number }[] = [];
+
+  for (const productId of productIds) {
+    const [product, stockRows] = await Promise.all([
+      getHiboutikProductDetails(productId),
+      hiboutik<HiboutikStockRow[]>(`/stock_available/product_id/${productId}`),
+    ]);
+    if (!product || product.product_stock_management === 0) continue;
+    if (!Array.isArray(stockRows) || stockRows.length === 0) continue;
+
+    const stock = Math.max(
+      0,
+      stockRows.reduce((sum, row) => sum + (Number(row.stock_available) || 0), 0),
+    );
+    const siteProducts = await prisma.product.findMany({
+      where: {
+        OR: hiboutikKeys(product).map((key) => ({
+          sku: { equals: key, mode: "insensitive" as const },
+        })),
+      },
+      select: { id: true, stock: true },
+    });
+    for (const sp of siteProducts) {
+      if (sp.stock !== stock) updates.push({ id: sp.id, stock });
+    }
+  }
+
+  return { updated: await applyStockUpdates(updates) };
+}
+
 /**
  * Hiboutik → site : crée les nouveaux produits, recopie le stock
  * (tous entrepôts cumulés) et, si demandé, importe les photos.
@@ -603,8 +810,8 @@ export async function syncStockFromHiboutik(
   });
 
   let matched = 0;
-  let updated = 0;
   const unmatchedSiteSkus: string[] = [];
+  const stockUpdates: { id: string; stock: number }[] = [];
 
   for (const sp of siteProducts) {
     const hp = byKey.get(norm(sp.sku));
@@ -616,11 +823,10 @@ export async function syncStockFromHiboutik(
     // Produit sans gestion de stock côté caisse : on ne touche pas au site.
     if (!hasStockData || hp.product_stock_management === 0) continue;
     const stock = Math.max(0, stockById.get(hp.product_id) ?? 0);
-    if (stock !== sp.stock) {
-      await prisma.product.update({ where: { id: sp.id }, data: { stock } });
-      updated++;
-    }
+    if (stock !== sp.stock) stockUpdates.push({ id: sp.id, stock });
   }
+
+  const updated = await applyStockUpdates(stockUpdates);
 
   const images = options.withImages
     ? await backfillImages(byKey)
@@ -639,7 +845,18 @@ export async function syncStockFromHiboutik(
   };
 }
 
-async function findHiboutikProductId(sku: string): Promise<number | null> {
+/** SKU de secours attribué aux produits caisse sans code-barres ni réf. fournisseur. */
+const FALLBACK_SKU = /^HB-(\d+)$/i;
+
+export async function findHiboutikProductId(
+  sku: string,
+): Promise<number | null> {
+  // `HB-<id>` n'est ni un code-barres ni une réf. fournisseur : c'est
+  // directement l'identifiant Hiboutik (voir hiboutikSku). Sans ce cas, les
+  // ventes web de ces produits ne décrémentaient jamais le stock caisse.
+  const fallback = FALLBACK_SKU.exec(sku.trim());
+  if (fallback) return Number(fallback[1]);
+
   for (const path of [
     `/products/search/barcode/${encodeURIComponent(sku)}/`,
     `/products/search/supplier_reference/${encodeURIComponent(sku)}/`,

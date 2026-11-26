@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 
@@ -19,38 +18,11 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-// Auto-hébergées et préchargées par Next (plus d'@import Google Fonts
-// bloquant dans globals.css). Mêmes familles et graisses qu'avant.
-const cormorant = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  style: ["normal", "italic"],
-  display: "swap",
-  variable: "--font-cormorant",
-});
-
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
-  style: ["normal", "italic"],
-  display: "swap",
-  variable: "--font-playfair",
-});
-
-const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-inter",
-});
-
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="fr"
-      className={`${cormorant.variable} ${playfair.variable} ${inter.variable}`}
-    >
+    <html lang="fr">
       <body>
         <Providers>{children}</Providers>
       </body>

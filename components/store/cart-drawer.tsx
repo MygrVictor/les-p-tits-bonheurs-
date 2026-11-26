@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import { SafeImage } from "@/components/ui/image";
 import { X, Minus, Plus, ShoppingBag } from "lucide-react";
 import {
   useCartStore,
@@ -68,7 +68,7 @@ export function CartDrawer({
                 >
                   <div className="relative h-20 w-16 shrink-0 overflow-hidden rounded-xl bg-white">
                     {item.productImage ? (
-                      <Image
+                      <SafeImage
                         src={item.productImage}
                         alt={item.productName}
                         fill

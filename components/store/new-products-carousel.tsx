@@ -66,6 +66,7 @@ export function NewProductsCarousel({
                     alt={product.name}
                     width={480}
                     height={480}
+                    sizes="(max-width: 640px) 72vw, 240px"
                     loading="lazy"
                     placeholder="blur"
                     blurDataURL="data:image/gif;base64,R0lGODlhAQABAAAAACw="

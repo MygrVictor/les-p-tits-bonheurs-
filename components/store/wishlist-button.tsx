@@ -10,6 +10,48 @@ interface WishlistButtonProps {
   size?: number;
 }
 
+/**
+ * Wishlist partagée entre tous les boutons de la page : UNE requête
+ * GET /api/wishlist, quel que soit le nombre de cartes produit affichées
+ * (avant : une requête par carte, ce qui déclenchait le rate limit de
+ * 20 req/min dès la 2e page catégorie consultée).
+ * Contient les slugs ET les ids des produits favoris.
+ */
+let wishlistRequest: Promise<Set<string>> | null = null;
+let wishlistLoadedAt = 0;
+const WISHLIST_TTL_MS = 60_000;
+
+function loadWishlist(): Promise<Set<string>> {
+  if (!wishlistRequest || Date.now() - wishlistLoadedAt > WISHLIST_TTL_MS) {
+    wishlistLoadedAt = Date.now();
+    wishlistRequest = fetch("/api/wishlist")
+      .then((res) => (res.ok ? res.json() : { items: [] }))
+      .then((data: { items?: { product: { slug: string; id: string } }[] }) => {
+        const keys = new Set<string>();
+        for (const item of data.items ?? []) {
+          keys.add(item.product.slug);
+          keys.add(item.product.id);
+        }
+        return keys;
+      })
+      .catch(() => {
+        wishlistRequest = null; // on retentera au prochain montage
+        return new Set<string>();
+      });
+  }
+  return wishlistRequest;
+}
+
+function updateCachedWishlist(productId: string, present: boolean) {
+  if (!wishlistRequest) return;
+  wishlistRequest = wishlistRequest.then((keys) => {
+    const next = new Set(keys);
+    if (present) next.add(productId);
+    else next.delete(productId);
+    return next;
+  });
+}
+
 export function WishlistButton({
   productId,
   className = "",
@@ -20,19 +62,18 @@ export function WishlistButton({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (status !== "authenticated") return;
+    if (status !== "authenticated") {
+      wishlistRequest = null; // déconnexion : ne pas réutiliser la liste d'un autre compte
+      return;
+    }
 
-    fetch("/api/wishlist")
-      .then((res) => res.json())
-      .then((data: { items?: { product: { slug: string; id: string } }[] }) => {
-        if (!data.items) return;
-        const found = data.items.some(
-          (item) =>
-            item.product.slug === productId || item.product.id === productId,
-        );
-        setInWishlist(found);
-      })
-      .catch(() => {});
+    let cancelled = false;
+    loadWishlist().then((keys) => {
+      if (!cancelled) setInWishlist(keys.has(productId));
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [status, productId]);
 
   const toggle = useCallback(
@@ -52,14 +93,20 @@ export function WishlistButton({
             `/api/wishlist?productId=${encodeURIComponent(productId)}`,
             { method: "DELETE" },
           );
-          if (res.ok) setInWishlist(false);
+          if (res.ok) {
+            setInWishlist(false);
+            updateCachedWishlist(productId, false);
+          }
         } else {
           const res = await fetch("/api/wishlist", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ productId }),
           });
-          if (res.ok) setInWishlist(true);
+          if (res.ok) {
+            setInWishlist(true);
+            updateCachedWishlist(productId, true);
+          }
         }
       } catch {
         // ignore

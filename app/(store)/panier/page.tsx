@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import { SafeImage } from "@/components/ui/image";
 import { Minus, Plus, X, ShoppingBag } from "lucide-react";
 import {
   useCartStore,
@@ -52,7 +52,7 @@ export default function CartPage() {
             >
               <div className="relative h-24 w-20 shrink-0 overflow-hidden rounded-2xl bg-blush-50 sm:h-28 sm:w-24">
                 {item.productImage ? (
-                  <Image
+                  <SafeImage
                     src={item.productImage}
                     alt={item.productName}
                     fill

@@ -29,7 +29,7 @@ export function BentoBoutique() {
               alt="L'atelier"
               fill
               className="object-cover transition duration-700 hover:scale-105"
-              sizes="(max-width: 768px) 100vw, 35vw"
+              sizes="(max-width: 768px) 50vw, 35vw"
             />
           </div>
 
@@ -39,7 +39,7 @@ export function BentoBoutique() {
               alt="La boutique"
               fill
               className="object-cover transition duration-700 hover:scale-105"
-              sizes="(max-width: 768px) 100vw, 30vw"
+              sizes="(max-width: 768px) 50vw, 30vw"
             />
           </div>
         </div>

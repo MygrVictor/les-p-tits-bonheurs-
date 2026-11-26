@@ -18,6 +18,9 @@ export function ProductCard({ product }: Readonly<{ product: Product }>) {
             alt={product.name}
             width={800}
             height={1000}
+            // Grille 2 col. mobile, 3 tablette, 4 desktop : sans `sizes`, un
+            // écran Retina téléchargeait ~1920 px pour une carte de ~180 px.
+            sizes="(max-width: 1024px) 50vw, (max-width: 1280px) 30vw, 22vw"
             loading="lazy"
             placeholder="blur"
             blurDataURL="data:image/gif;base64,R0lGODlhAQABAAAAACw="

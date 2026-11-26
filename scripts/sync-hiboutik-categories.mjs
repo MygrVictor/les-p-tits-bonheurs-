@@ -7,9 +7,17 @@
 // Usage :
 //   node --env-file=.env scripts/sync-hiboutik-categories.mjs          (simulation)
 //   node --env-file=.env scripts/sync-hiboutik-categories.mjs --apply  (crée)
+//
+// Nettoyage (à part, jamais automatique) : catégories du site absentes de
+// Hiboutik, supprimées SEULEMENT si elles n'ont ni produit ni sous-catégorie
+// restante. « couleurs » (page spéciale) est toujours conservée.
+//   node --env-file=.env scripts/sync-hiboutik-categories.mjs --prune          (simulation)
+//   node --env-file=.env scripts/sync-hiboutik-categories.mjs --prune --apply  (supprime)
 import { PrismaClient } from "@prisma/client";
 
 const apply = process.argv.includes("--apply");
+const prune = process.argv.includes("--prune");
+const PROTECTED_SLUGS = new Set(["couleurs"]);
 const prisma = new PrismaClient();
 
 const SLUG_ALIASES = {
@@ -91,6 +99,53 @@ async function resolveNode(id, depth = 0) {
 }
 
 for (const id of nodes.keys()) await resolveNode(id);
+
+if (prune) {
+  const mirrored = new Set([...done.values()].filter(Boolean).map((c) => c.slug));
+  const all = await prisma.category.findMany({
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      parentId: true,
+      _count: { select: { products: true } },
+    },
+  });
+  const candidates = all.filter(
+    (c) => !mirrored.has(c.slug) && !PROTECTED_SLUGS.has(c.slug),
+  );
+  // Tant qu'une catégorie a des produits ou un enfant conservé, elle reste.
+  const kept = new Set(
+    all.filter((c) => !candidates.includes(c)).map((c) => c.id),
+  );
+  const removable = new Set(candidates.map((c) => c.id));
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const c of candidates) {
+      if (!removable.has(c.id)) continue;
+      const hasProducts = c._count.products > 0;
+      const hasKeptChild = all.some(
+        (x) => x.parentId === c.id && !removable.has(x.id),
+      );
+      if (hasProducts || hasKeptChild) {
+        removable.delete(c.id);
+        kept.add(c.id);
+        changed = true;
+      }
+    }
+  }
+  console.log(apply ? "MODE APPLY (nettoyage)" : "SIMULATION nettoyage (rien n'est supprimé)");
+  console.log("Supprimables (vides, absentes de Hiboutik) :");
+  for (const c of candidates.filter((x) => removable.has(x.id))) console.log(`  - ${c.slug}  "${c.name}"`);
+  console.log("Conservées car elles contiennent des produits :");
+  for (const c of candidates.filter((x) => !removable.has(x.id))) console.log(`  = ${c.slug}  "${c.name}"  (${c._count.products} produit(s))`);
+  if (apply) {
+    await prisma.category.deleteMany({ where: { id: { in: [...removable] } } });
+  }
+  await prisma.$disconnect();
+  process.exit(0);
+}
 
 console.log(apply ? "MODE APPLY" : "SIMULATION (rien n'est écrit)");
 console.log(`Déjà présentes : ${reused}`);

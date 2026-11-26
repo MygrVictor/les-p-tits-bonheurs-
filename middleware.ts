@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import NextAuth from "next-auth";
 import type { NextAuthRequest } from "next-auth";
-import { rateLimit } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { authConfig } from "@/lib/auth.config";
 
 // Routes soumises au rate limiting (hits par IP, fenêtre glissante 60 s)
@@ -90,7 +90,7 @@ export default auth(async function middleware(request: NextAuthRequest) {
     ].join("; "),
   );
 
-  // Rate limiting réel : fenêtre glissante 60 s, par IP
+  // Rate limiting : fenêtre 60 s par IP, partagé via Upstash si configuré
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     request.headers.get("x-real-ip") ??
@@ -98,7 +98,11 @@ export default auth(async function middleware(request: NextAuthRequest) {
 
   const rule = RATE_LIMIT_RULES.find((r) => pathname.startsWith(r.prefix));
   if (rule) {
-    const result = rateLimit(`${rule.prefix}:${ip}`, rule.limit, 60_000);
+    const result = await checkRateLimit(
+      `${rule.prefix}:${ip}`,
+      rule.limit,
+      60_000,
+    );
     if (!result.ok) {
       return new NextResponse("Too Many Requests", {
         status: 429,

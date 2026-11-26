@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getStripeClient } from "@/lib/stripe";
 import { sendOrderConfirmation } from "@/lib/order-notifications";
 import { pushOrderToHiboutik } from "@/lib/hiboutik";
+import { runInBackground } from "@/lib/background";
 
 type OrderWithDetails = Prisma.OrderGetPayload<{
   include: {
@@ -386,34 +387,48 @@ export async function finalizeCheckoutSession(
   // Email de confirmation — envoyé une seule fois ici, au moment exact de
   // la création réelle de la commande (pas à chaque relecture idempotente
   // ci-dessus, sinon on spammerait le client à chaque appel de cette
-  // fonction). "Best effort" : ne doit jamais faire échouer la commande.
+  // fonction).
+  //
+  // Email + caisse partent en tâche de fond : le client (page de
+  // confirmation) n'attend plus 5 à 10 appels réseau, et un échec de l'un
+  // d'eux ne peut plus transformer une commande PAYÉE en page d'erreur.
   if (created) {
-    await sendOrderConfirmation({
-      email: normalizedEmail,
-      orderId: order.id,
-      total: order.total,
-      items: order.items.map((item) => ({
-        productName: item.product?.name ?? "Produit",
-        quantity: item.quantity,
-        price: item.price,
-      })),
-      relayPoint,
-    });
+    const createdOrder = order;
 
-    // Décrémente aussi le stock de la caisse Hiboutik (best effort).
-    const skus = await prisma.product.findMany({
-      where: { id: { in: order.items.map((i) => i.productId) } },
-      select: { id: true, sku: true },
-    });
-    const skuById = new Map(skus.map((p) => [p.id, p.sku]));
-    await pushOrderToHiboutik({
-      id: order.id,
-      items: order.items.map((i) => ({
-        sku: skuById.get(i.productId) ?? null,
-        quantity: i.quantity,
-        price: i.price,
-      })),
-    });
+    runInBackground(
+      `email confirmation ${createdOrder.id}`,
+      sendOrderConfirmation({
+        email: normalizedEmail,
+        orderId: createdOrder.id,
+        total: createdOrder.total,
+        items: createdOrder.items.map((item) => ({
+          productName: item.product?.name ?? "Produit",
+          quantity: item.quantity,
+          price: item.price,
+        })),
+        relayPoint,
+      }),
+    );
+
+    // Décrémente aussi le stock de la caisse Hiboutik.
+    runInBackground(
+      `hiboutik ${createdOrder.id}`,
+      (async () => {
+        const skus = await prisma.product.findMany({
+          where: { id: { in: createdOrder.items.map((i) => i.productId) } },
+          select: { id: true, sku: true },
+        });
+        const skuById = new Map(skus.map((p) => [p.id, p.sku]));
+        await pushOrderToHiboutik({
+          id: createdOrder.id,
+          items: createdOrder.items.map((i) => ({
+            sku: skuById.get(i.productId) ?? null,
+            quantity: i.quantity,
+            price: i.price,
+          })),
+        });
+      })(),
+    );
   }
 
   return {

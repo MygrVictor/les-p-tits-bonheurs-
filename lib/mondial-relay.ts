@@ -163,5 +163,12 @@ export async function searchRelayPoints(
     }
   }
 
+  // Fournisseur non configuré : les points fictifs ne sont servis que si
+  // c'est explicitement autorisé (dev / démo). En production, mieux vaut
+  // bloquer la commande que laisser un client payer pour un relais inventé.
+  if (!shouldUseMockData()) {
+    throw new Error("MONDIAL_RELAY_NOT_CONFIGURED");
+  }
+
   return { points: getMockRelayPoints(postalCode, city), source: "mock" };
 }

@@ -2,7 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const rateLimitMock = vi.fn();
 
-vi.mock("@/lib/rate-limit", () => ({ rateLimit: rateLimitMock }));
+vi.mock("@/lib/rate-limit", () => ({
+  rateLimit: rateLimitMock,
+  checkRateLimit: async (...args: unknown[]) => rateLimitMock(...args),
+}));
 vi.mock("@/lib/auth.config", () => ({ authConfig: {} }));
 vi.mock("next-auth", () => ({
   default: () => ({
